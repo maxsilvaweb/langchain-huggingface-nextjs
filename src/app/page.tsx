@@ -1,12 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChatWindow } from '@/components/chat/chat-window';
 import { SetupNotice } from '@/components/setup-notice';
 
 export default function Home() {
-  // Simple session ID for the demo
-  const [sessionId] = useState(() => Math.random().toString(36).substring(7));
+  // Use localStorage to persist the session ID
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Only run on the client
+    const storedId = localStorage.getItem('chat_session_id');
+    if (storedId) {
+      setSessionId(storedId);
+    } else {
+      const newId = crypto.randomUUID();
+      localStorage.setItem('chat_session_id', newId);
+      setSessionId(newId);
+    }
+  }, []);
 
   const hasEnv = !!process.env.NEXT_PUBLIC_CONVEX_URL;
 
@@ -22,7 +34,13 @@ export default function Home() {
           </p>
         </div>
 
-        {!hasEnv ? <SetupNotice /> : <ChatWindow sessionId={sessionId} />}
+        {!hasEnv ? (
+          <SetupNotice />
+        ) : sessionId ? (
+          <ChatWindow sessionId={sessionId} />
+        ) : (
+          <div className="w-full h-[700px] bg-black/20 backdrop-blur-sm rounded-xl border border-white/5 animate-pulse" />
+        )}
       </div>
     </main>
   );
