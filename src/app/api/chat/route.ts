@@ -1,12 +1,29 @@
 import { ChatOpenAI } from '@langchain/openai';
-import { ChatPromptTemplate } from '@langchain/core/prompts';
+import {
+  ChatPromptTemplate,
+  MessagesPlaceholder,
+} from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
+import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '../../../../convex/_generated/api';
 import { HUGGINGFACE_MODELS } from '@/lib/ai/models';
 
 export async function POST(req: Request) {
   try {
-    const { message } = await req.json();
+    const { message, sessionId } = await req.json();
     const apiKey = process.env.HUGGINGFACE_API_KEY;
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+
+    if (!message || !sessionId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing message or sessionId' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
 
     if (!apiKey) {
       return new Response(
@@ -18,8 +35,17 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!convexUrl) {
+      return new Response(
+        JSON.stringify({ error: 'Missing NEXT_PUBLIC_CONVEX_URL' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
     // Use ChatOpenAI pointing to Hugging Face's OpenAI-compatible endpoint
-    // This is the most reliable way to use HF chat models in LangChain.js
     const model = new ChatOpenAI({
       modelName: HUGGINGFACE_MODELS.default,
       apiKey,
@@ -30,8 +56,27 @@ export async function POST(req: Request) {
       temperature: 0.7,
     });
 
+    // 1. Fetch history from Convex
+    const convex = new ConvexHttpClient(convexUrl);
+    const storedMessages = await convex.query(api.messages.list, { sessionId });
+
+    // 2. Prepare history for LangChain
+    const history = storedMessages
+      .sort((a, b) => a._creationTime - b._creationTime)
+      .slice(-12) // Keep last 12 messages for context
+      .map((entry) =>
+        entry.author === 'user'
+          ? new HumanMessage(entry.body)
+          : new AIMessage(entry.body),
+      );
+
+    // 3. Setup prompt with history placeholder
     const prompt = ChatPromptTemplate.fromMessages([
-      ['system', 'You are a helpful AI assistant.'],
+      [
+        'system',
+        'You are a helpful AI assistant. Use the conversation history to answer follow-up questions consistently.',
+      ],
+      new MessagesPlaceholder('history'),
       ['user', '{input}'],
     ]);
 
@@ -39,6 +84,7 @@ export async function POST(req: Request) {
 
     const stream = await chain.stream({
       input: message,
+      history,
     });
 
     const encoder = new TextEncoder();
