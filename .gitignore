@@ -1,0 +1,10 @@
+.next
+node_modules
+.env*
+!.env.example
+coverage
+dist
+build
+*.log
+AGENTS.md
+CLAUDE.md
