@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useMutation, useQuery } from 'convex/react';
-import { anyApi } from 'convex/server';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,7 +11,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { MessageBubble } from './message-bubble';
-import { Send, Loader2, Trash2 } from 'lucide-react';
+import { Send, Loader2, Trash2, AlertCircle } from 'lucide-react';
+import { useChat } from '@/hooks/use-chat';
 
 interface ChatWindowProps {
   sessionId: string;
@@ -21,75 +20,32 @@ interface ChatWindowProps {
 
 export function ChatWindow({ sessionId }: ChatWindowProps) {
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // We use anyApi since we don't have generated code yet
-  const messages = useQuery(anyApi.messages.list, { sessionId }) || [];
-  const sendMessage = useMutation(anyApi.messages.send);
-  const clearMessages = useMutation(anyApi.messages.clear);
+  const {
+    messages,
+    isSending,
+    error,
+    sendMessage,
+    retryLastMessage,
+    clearMessages,
+    canRetry,
+  } = useChat(sessionId);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isSending]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
 
-    const userMessage = input.trim();
+    const message = input.trim();
+    if (!message || isSending) return;
+
     setInput('');
-    setIsLoading(true);
-
-    try {
-      // 1. Save user message to Convex
-      await sendMessage({
-        body: userMessage,
-        author: 'user',
-        sessionId,
-      });
-
-      // 2. Call API for streaming response
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: userMessage, sessionId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: 'Failed to fetch AI response' }));
-        throw new Error(errorData.error || 'Failed to fetch AI response');
-      }
-
-      const reader = response.body?.getReader();
-      let aiResponse = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = new TextDecoder().decode(value);
-          aiResponse += chunk;
-        }
-      }
-
-      // 3. Save AI message to Convex
-      await sendMessage({
-        body: aiResponse,
-        author: 'ai',
-        sessionId,
-      });
-    } catch (error) {
-      console.error('Error in chat:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    await sendMessage(message);
   };
 
   return (
@@ -99,8 +55,9 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => clearMessages({ sessionId })}
+          onClick={() => void clearMessages()}
           title="Clear chat"
+          disabled={isSending}
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -109,15 +66,37 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
         ref={scrollRef}
         className="flex-1 overflow-y-auto space-y-2 p-6 scroll-smooth scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40"
       >
-        {messages.length === 0 && !isLoading && (
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-100">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium">Message failed</p>
+                <p className="text-red-100/80">{error}</p>
+                {canRetry && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => void retryLastMessage()}
+                  >
+                    Retry
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {messages.length === 0 && !isSending && (
           <div className="text-center text-muted-foreground pt-8">
             Start a conversation with the Hugging Face AI!
           </div>
         )}
-        {messages.map((msg: any) => (
+        {messages.map((msg) => (
           <MessageBubble key={msg._id} message={msg} />
         ))}
-        {isLoading && (
+        {isSending && (
           <div className="flex justify-start">
             <div className="bg-muted p-3 rounded-lg flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -132,11 +111,11 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
-            disabled={isLoading}
+            disabled={isSending}
             className="flex-1"
           />
-          <Button type="submit" disabled={isLoading || !input.trim()}>
-            {isLoading ? (
+          <Button type="submit" disabled={isSending || !input.trim()}>
+            {isSending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />
