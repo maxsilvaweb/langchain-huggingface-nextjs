@@ -16,16 +16,20 @@ export function useChat(conversationId: Id<'conversations'>) {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSubmittedMessage, setLastSubmittedMessage] = useState<string | null>(null);
+  const [lastUsedModel, setLastUsedModel] = useState<string | undefined>();
+  const [lastUsedProvider, setLastUsedProvider] = useState<string | undefined>();
   const [streamingMessage, setStreamingMessage] = useState<string>('');
 
   const runChatRequest = useCallback(
-    async (rawMessage: string) => {
+    async (rawMessage: string, modelName?: string, provider?: string) => {
       const message = rawMessage.trim();
       if (!message || isSending) return;
 
       setIsSending(true);
       setError(null);
       setLastSubmittedMessage(message);
+      setLastUsedModel(modelName);
+      setLastUsedProvider(provider);
       setStreamingMessage('');
 
       try {
@@ -40,7 +44,7 @@ export function useChat(conversationId: Id<'conversations'>) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ message, conversationId }),
+          body: JSON.stringify({ message, conversationId, modelName, provider }),
         });
 
         if (!response.ok) {
@@ -96,7 +100,7 @@ export function useChat(conversationId: Id<'conversations'>) {
             label: 'Retry',
             onClick: () => {
               // We intentionally do not await this so it fires in background
-              void runChatRequest(rawMessage);
+              void runChatRequest(rawMessage, modelName, provider);
             },
           },
         });
@@ -109,8 +113,8 @@ export function useChat(conversationId: Id<'conversations'>) {
 
   const retryLastMessage = useCallback(async () => {
     if (!lastSubmittedMessage || isSending) return;
-    await runChatRequest(lastSubmittedMessage);
-  }, [isSending, lastSubmittedMessage, runChatRequest]);
+    await runChatRequest(lastSubmittedMessage, lastUsedModel, lastUsedProvider);
+  }, [isSending, lastSubmittedMessage, lastUsedModel, lastUsedProvider, runChatRequest]);
 
   const clearMessages = useCallback(async () => {
     setError(null);

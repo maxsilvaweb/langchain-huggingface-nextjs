@@ -14,6 +14,7 @@ import { MessageBubble } from './message-bubble';
 import { Send, Loader2, Trash2 } from 'lucide-react';
 import { useChat } from '@/hooks/use-chat';
 import type { Id } from '../../../convex/_generated/dataModel';
+import { AVAILABLE_MODELS } from '@/lib/ai/models';
 
 interface ChatWindowProps {
   conversationId: Id<'conversations'>;
@@ -21,6 +22,7 @@ interface ChatWindowProps {
 
 export function ChatWindow({ conversationId }: ChatWindowProps) {
   const [input, setInput] = useState('');
+  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -44,13 +46,32 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
     if (!message || isSending) return;
 
     setInput('');
-    await sendMessage(message);
+    const selectedModelObj = AVAILABLE_MODELS.find(m => m.id === selectedModel);
+    await sendMessage(message, selectedModel, selectedModelObj?.provider);
   };
 
   return (
     <Card className="w-full h-[700px] flex flex-col shadow-xl bg-white/60 border-zinc-200 dark:border-white/5 dark:bg-black/20 backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xl font-bold">LangChain Chat</CardTitle>
+        <div className="flex items-center gap-4">
+          <CardTitle className="text-xl font-bold">LangChain Chat</CardTitle>
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            disabled={isSending}
+            className="text-sm bg-white/50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-zinc-400"
+          >
+            {Array.from(new Set(AVAILABLE_MODELS.map(m => m.provider))).map(provider => (
+              <optgroup key={provider} label={provider.toUpperCase()}>
+                {AVAILABLE_MODELS.filter(m => m.provider === provider).map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -67,7 +88,7 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
       >
         {messages.length === 0 && !isSending && (
           <div className="text-center text-zinc-500 pt-8">
-            Start a conversation with the Hugging Face AI!
+            Start a conversation with the AI!
           </div>
         )}
         {messages.map((msg) => (
