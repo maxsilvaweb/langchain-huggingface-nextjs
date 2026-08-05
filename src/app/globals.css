@@ -1,18 +1,34 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
+  color-scheme: light;
+  --bg-color: #ffffff;
+  --text-color: #09090b;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --grad-top: rgba(56, 189, 248, 0.05);
+  --grad-right: rgba(139, 92, 246, 0.05);
+}
+
+.dark {
   color-scheme: dark;
+  --bg-color: #09090b;
+  --text-color: #fafafa;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --grad-top: rgba(56, 189, 248, 0.12);
+  --grad-right: rgba(139, 92, 246, 0.14);
 }
 
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 32%),
-    radial-gradient(circle at right, rgba(139, 92, 246, 0.14), transparent 28%),
-    #09090b;
-  color: #fafafa;
+    radial-gradient(circle at top, var(--grad-top), transparent 32%),
+    radial-gradient(circle at right, var(--grad-right), transparent 28%),
+    var(--bg-color);
+  color: var(--text-color);
 }
 
 * {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-color);
 }

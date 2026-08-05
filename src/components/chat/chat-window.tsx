@@ -11,26 +11,25 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { MessageBubble } from './message-bubble';
-import { Send, Loader2, Trash2, AlertCircle } from 'lucide-react';
+import { Send, Loader2, Trash2 } from 'lucide-react';
 import { useChat } from '@/hooks/use-chat';
+import type { Id } from '../../../convex/_generated/dataModel';
 
 interface ChatWindowProps {
-  sessionId: string;
+  conversationId: Id<'conversations'>;
 }
 
-export function ChatWindow({ sessionId }: ChatWindowProps) {
+export function ChatWindow({ conversationId }: ChatWindowProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const {
     messages,
+    streamingMessage,
     isSending,
-    error,
     sendMessage,
-    retryLastMessage,
     clearMessages,
-    canRetry,
-  } = useChat(sessionId);
+  } = useChat(conversationId);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -49,7 +48,7 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
   };
 
   return (
-    <Card className="w-full h-[700px] flex flex-col shadow-xl border-white/5 bg-black/20 backdrop-blur-sm">
+    <Card className="w-full h-[700px] flex flex-col shadow-xl bg-white/60 border-zinc-200 dark:border-white/5 dark:bg-black/20 backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-xl font-bold">LangChain Chat</CardTitle>
         <Button
@@ -64,41 +63,29 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
       </CardHeader>
       <CardContent
         ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-2 p-6 scroll-smooth scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40"
+        className="flex-1 overflow-y-auto space-y-2 p-6 scroll-smooth scrollbar-thin scrollbar-thumb-zinc-300 hover:scrollbar-thumb-zinc-400 dark:scrollbar-thumb-zinc-700 dark:hover:scrollbar-thumb-zinc-600"
       >
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-100">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <div className="flex-1">
-                <p className="font-medium">Message failed</p>
-                <p className="text-red-100/80">{error}</p>
-                {canRetry && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-3"
-                    onClick={() => void retryLastMessage()}
-                  >
-                    Retry
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         {messages.length === 0 && !isSending && (
-          <div className="text-center text-muted-foreground pt-8">
+          <div className="text-center text-zinc-500 pt-8">
             Start a conversation with the Hugging Face AI!
           </div>
         )}
         {messages.map((msg) => (
           <MessageBubble key={msg._id} message={msg} />
         ))}
-        {isSending && (
+        {streamingMessage && (
+          <MessageBubble 
+            message={{ 
+              _id: 'streaming-msg', 
+              _creationTime: Date.now(), 
+              body: streamingMessage, 
+              author: 'ai' 
+            }} 
+          />
+        )}
+        {isSending && !streamingMessage && (
           <div className="flex justify-start">
-            <div className="bg-muted p-3 rounded-lg flex items-center gap-2">
+            <div className="bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span className="text-sm">AI is thinking...</span>
             </div>

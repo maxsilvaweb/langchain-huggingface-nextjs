@@ -3,18 +3,20 @@
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import type { Doc } from '../../convex/_generated/dataModel';
+import type { Doc, Id } from '../../convex/_generated/dataModel';
+import { toast } from 'sonner';
 
 type ChatMessage = Doc<'messages'>;
 
-export function useChat(sessionId: string) {
-  const messages = (useQuery(api.messages.list, { sessionId }) ?? []) as ChatMessage[];
+export function useChat(conversationId: Id<'conversations'>) {
+  const messages = (useQuery(api.messages.list, { conversationId }) ?? []) as ChatMessage[];
   const sendMessageMutation = useMutation(api.messages.send);
   const clearMessagesMutation = useMutation(api.messages.clear);
 
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSubmittedMessage, setLastSubmittedMessage] = useState<string | null>(null);
+  const [streamingMessage, setStreamingMessage] = useState<string>('');
 
   const runChatRequest = useCallback(
     async (rawMessage: string) => {
@@ -24,12 +26,13 @@ export function useChat(sessionId: string) {
       setIsSending(true);
       setError(null);
       setLastSubmittedMessage(message);
+      setStreamingMessage('');
 
       try {
         await sendMessageMutation({
           body: message,
           author: 'user',
-          sessionId,
+          conversationId,
         });
 
         const response = await fetch('/api/chat', {
@@ -37,7 +40,7 @@ export function useChat(sessionId: string) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ message, sessionId }),
+          body: JSON.stringify({ message, conversationId }),
         });
 
         if (!response.ok) {
@@ -59,10 +62,16 @@ export function useChat(sessionId: string) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          aiResponse += decoder.decode(value, { stream: true });
+          const chunk = decoder.decode(value, { stream: true });
+          aiResponse += chunk;
+          setStreamingMessage(aiResponse);
         }
 
-        aiResponse += decoder.decode();
+        const lastChunk = decoder.decode();
+        if (lastChunk) {
+          aiResponse += lastChunk;
+          setStreamingMessage(aiResponse);
+        }
 
         if (!aiResponse.trim()) {
           throw new Error('AI returned an empty response');
@@ -71,19 +80,31 @@ export function useChat(sessionId: string) {
         await sendMessageMutation({
           body: aiResponse,
           author: 'ai',
-          sessionId,
+          conversationId,
         });
 
         setLastSubmittedMessage(null);
+        setStreamingMessage('');
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Unknown chat error';
         setError(message);
+        
+        toast.error('Message failed', {
+          description: message,
+          action: {
+            label: 'Retry',
+            onClick: () => {
+              // We intentionally do not await this so it fires in background
+              void runChatRequest(rawMessage);
+            },
+          },
+        });
       } finally {
         setIsSending(false);
       }
     },
-    [isSending, sendMessageMutation, sessionId],
+    [isSending, sendMessageMutation, conversationId],
   );
 
   const retryLastMessage = useCallback(async () => {
@@ -94,16 +115,15 @@ export function useChat(sessionId: string) {
   const clearMessages = useCallback(async () => {
     setError(null);
     setLastSubmittedMessage(null);
-    await clearMessagesMutation({ sessionId });
-  }, [clearMessagesMutation, sessionId]);
+    await clearMessagesMutation({ conversationId });
+  }, [clearMessagesMutation, conversationId]);
 
   return {
     messages,
+    streamingMessage,
     isSending,
     error,
     sendMessage: runChatRequest,
-    retryLastMessage,
     clearMessages,
-    canRetry: !!lastSubmittedMessage && !isSending,
   };
 }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 
 import { Providers } from '@/components/providers';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
 const suisseIntl = localFont({
@@ -38,7 +39,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={suisseIntl.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );

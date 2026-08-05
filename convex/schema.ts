@@ -2,11 +2,17 @@ import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
 export default defineSchema({
+  conversations: defineTable({
+    title: v.optional(v.string()),
+    // We can add userId here later when auth is added
+  }),
+
   messages: defineTable({
     body: v.string(),
     author: v.union(v.literal('user'), v.literal('ai')),
-    sessionId: v.string(),
-  }).index('by_session', ['sessionId']),
+    conversationId: v.optional(v.id('conversations')),
+    sessionId: v.optional(v.string()),
+  }).index('by_conversation', ['conversationId']),
 
   documents: defineTable({
     text: v.string(),

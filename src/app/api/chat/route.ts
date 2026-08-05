@@ -11,13 +11,13 @@ import { HUGGINGFACE_MODELS } from '@/lib/ai/models';
 
 export async function POST(req: Request) {
   try {
-    const { message, sessionId } = await req.json();
+    const { message, conversationId } = await req.json();
     const apiKey = process.env.HUGGINGFACE_API_KEY;
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
 
-    if (!message || !sessionId) {
+    if (!message || !conversationId) {
       return new Response(
-        JSON.stringify({ error: 'Missing message or sessionId' }),
+        JSON.stringify({ error: 'Missing message or conversationId' }),
         {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
     // 1. Fetch history from Convex
     const convex = new ConvexHttpClient(convexUrl);
-    const storedMessages = await convex.query(api.messages.list, { sessionId });
+    const storedMessages = await convex.query(api.messages.list, { conversationId });
 
     // 2. Prepare history for LangChain
     const history = storedMessages
