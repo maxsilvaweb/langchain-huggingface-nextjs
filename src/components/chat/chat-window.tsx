@@ -15,6 +15,7 @@ import { Send, Loader2, Trash2 } from 'lucide-react';
 import { useChat } from '@/hooks/use-chat';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { AVAILABLE_MODELS } from '@/lib/ai/models';
+import { toast } from 'sonner';
 
 interface ChatWindowProps {
   conversationId: Id<'conversations'>;
@@ -54,10 +55,17 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
     <Card className="w-full h-[700px] flex flex-col shadow-xl bg-white/60 border-zinc-200 dark:border-white/5 dark:bg-black/20 backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-4">
-          <CardTitle className="text-xl font-bold">LangChain Chat</CardTitle>
+          <CardTitle className="text-xl font-bold">Switch Model:</CardTitle>
           <select
             value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
+            onChange={(e) => {
+              const newModelId = e.target.value;
+              setSelectedModel(newModelId);
+              const newModelObj = AVAILABLE_MODELS.find(m => m.id === newModelId);
+              if (newModelObj) {
+                toast.success(`Switched to ${newModelObj.name}`);
+              }
+            }}
             disabled={isSending}
             className="text-sm bg-white/50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-zinc-400"
           >

@@ -10,7 +10,7 @@ import { StringOutputParser } from '@langchain/core/output_parsers';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '../../../../convex/_generated/api';
-import { HUGGINGFACE_MODELS } from '@/lib/ai/models';
+import { PROVIDER_FALLBACK_MODELS } from '@/lib/ai/models';
 
 export async function POST(req: Request) {
   try {
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
         const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) throw new Error('Missing OPENAI_API_KEY');
         model = new ChatOpenAI({
-          modelName: modelName || 'gpt-4o-mini',
+          modelName: modelName || PROVIDER_FALLBACK_MODELS.openai,
           apiKey,
           streaming: true,
           temperature: 0.7,
@@ -54,11 +54,17 @@ export async function POST(req: Request) {
       case 'anthropic': {
         const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY');
+        
+        const finalModelName = modelName || PROVIDER_FALLBACK_MODELS.anthropic;
+        // The new Claude 5 models (Fable 5, Opus 5, Sonnet 5) often use adaptive thinking 
+        // which prevents manual temperature overrides. We omit it for all Claude 5 models.
+        const isClaude5 = finalModelName.includes('-5');
+        
         model = new ChatAnthropic({
-          modelName: modelName || 'claude-3-5-sonnet-latest',
+          modelName: finalModelName,
           apiKey,
           streaming: true,
-          temperature: 0.7,
+          ...(isClaude5 ? {} : { temperature: 0.7 }),
         });
         break;
       }
@@ -66,7 +72,7 @@ export async function POST(req: Request) {
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) throw new Error('Missing GOOGLE_API_KEY');
         model = new ChatGoogleGenerativeAI({
-          model: modelName || 'gemini-1.5-flash',
+          model: modelName || PROVIDER_FALLBACK_MODELS.google,
           apiKey,
           streaming: true,
           temperature: 0.7,
@@ -78,7 +84,7 @@ export async function POST(req: Request) {
         const apiKey = process.env.HUGGINGFACE_API_KEY;
         if (!apiKey) throw new Error('Missing HUGGINGFACE_API_KEY');
         model = new ChatOpenAI({
-          modelName: modelName || HUGGINGFACE_MODELS.default,
+          modelName: modelName || PROVIDER_FALLBACK_MODELS.huggingface,
           apiKey,
           configuration: {
             baseURL: 'https://router.huggingface.co/v1',
