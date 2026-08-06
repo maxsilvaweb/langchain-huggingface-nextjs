@@ -2,9 +2,9 @@
 
 <div align="center">
   <img src="https://assets.vercel.com/image/upload/v1662130559/nextjs/Icon_light_background.png" alt="Next.js" width="50" height="50" style="margin: 0 10px;" />
-  <img src="https://js.langchain.com/v0.2/img/parrot-chainlink-icon.png" alt="LangChain" width="50" height="50" style="margin: 0 10px;" />
+  <img src="https://cdn.simpleicons.org/langchain/1C3C3C" alt="LangChain" width="50" height="50" style="margin: 0 10px;" />
   <img src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg" alt="Hugging Face" width="50" height="50" style="margin: 0 10px;" />
-  <img src="https://raw.githubusercontent.com/get-convex/convex-react/main/convex-logo.png" alt="Convex" width="50" height="50" style="margin: 0 10px;" />
+  <img src="https://cdn.jsdelivr.net/gh/get-convex/agent@main/test-assets/convex-logo.svg" alt="Convex" width="50" height="50" style="margin: 0 10px;" />
 </div>
 
 <br/>
