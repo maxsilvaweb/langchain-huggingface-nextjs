@@ -14,9 +14,6 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     try:
-        # Save user message
-        chat_service.save_interaction(request.conversationId, request.message, "user")
-        
         # Get generator
         async_gen = chat_service.get_chat_stream(request.message, request.conversationId)
             

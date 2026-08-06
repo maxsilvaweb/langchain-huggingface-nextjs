@@ -81,11 +81,11 @@ export function useChat(conversationId: Id<'conversations'>) {
           throw new Error('AI returned an empty response');
         }
 
-        await sendMessageMutation({
-          body: aiResponse,
-          author: 'ai',
-          conversationId,
-        });
+        // await sendMessageMutation({
+        //   body: aiResponse,
+        //   author: 'ai',
+        //   conversationId,
+        // });
 
         setLastSubmittedMessage(null);
         setStreamingMessage('');
