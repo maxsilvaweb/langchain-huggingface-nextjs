@@ -33,12 +33,7 @@ export function useChat(conversationId: Id<'conversations'>) {
       setStreamingMessage('');
 
       try {
-        await sendMessageMutation({
-          body: message,
-          author: 'user',
-          conversationId,
-        });
-
+        // Backend now handles saving the user message as the single source of truth
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: {
@@ -81,6 +76,7 @@ export function useChat(conversationId: Id<'conversations'>) {
           throw new Error('AI returned an empty response');
         }
 
+        // Frontend no longer saves AI response - backend does this
         // await sendMessageMutation({
         //   body: aiResponse,
         //   author: 'ai',
@@ -99,7 +95,6 @@ export function useChat(conversationId: Id<'conversations'>) {
           action: {
             label: 'Retry',
             onClick: () => {
-              // We intentionally do not await this so it fires in background
               void runChatRequest(rawMessage, modelName, provider);
             },
           },
@@ -108,7 +103,7 @@ export function useChat(conversationId: Id<'conversations'>) {
         setIsSending(false);
       }
     },
-    [isSending, sendMessageMutation, conversationId],
+    [isSending, conversationId],
   );
 
   const retryLastMessage = useCallback(async () => {

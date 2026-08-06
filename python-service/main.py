@@ -14,6 +14,9 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     try:
+        # Save user message
+        chat_service.save_interaction(request.conversationId, request.message, "user")
+        
         # Get generator
         async_gen = chat_service.get_chat_stream(request.message, request.conversationId)
             
@@ -27,5 +30,4 @@ async def chat(request: ChatRequest):
                 
         return StreamingResponse(stream_generator(), media_type="text/event-stream")
     except Exception as e:
-        print(f"DEBUG: Error in chat endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
