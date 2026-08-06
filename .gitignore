@@ -8,3 +8,8 @@ build
 *.log
 AGENTS.md
 CLAUDE.md
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
