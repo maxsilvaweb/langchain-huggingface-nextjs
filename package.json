@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "convex:dev": "convex dev"
+    "convex:dev": "convex dev",
+    "test:python": "cd python-service && ./venv/bin/pytest"
   },
   "packageManager": "bun@1.2.1",
   "devDependencies": {

@@ -65,3 +65,6 @@ uvicorn==0.52.1
 websockets==15.0.1
 xxhash==3.8.1
 zstandard==0.25.0
+pytest==8.3.4
+pytest-asyncio==0.25.3
+torch==2.6.0
