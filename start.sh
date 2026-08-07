@@ -8,6 +8,7 @@ CONVEX_PID=$!
 # Start Python FastAPI service
 echo "Starting Python Service..."
 cd python-service
+export PYTHONPATH=$PYTHONPATH:.
 ./venv/bin/uvicorn main:app --port 8000 &
 PYTHON_PID=$!
 
