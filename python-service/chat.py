@@ -2,7 +2,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 import db as convex
 import llm
 
-def get_chat_stream(message: str, conversation_id: str):
+def get_chat_stream(message: str, conversation_id: str, model_name: str = None, provider: str = 'huggingface'):
     # Fetch history
     messages = convex.get_history(conversation_id)
     history = [
@@ -10,8 +10,8 @@ def get_chat_stream(message: str, conversation_id: str):
         for m in sorted(messages, key=lambda x: x["_creationTime"])
     ]
     
-    # Get chain and stream
-    chain = llm.get_chain()
+    # Get chain and stream with dynamic provider
+    chain = llm.get_chain(model_name, provider)
     return chain.astream({"input": message, "history": history})
 
 def save_interaction(conversation_id: str, message: str, author: str):
