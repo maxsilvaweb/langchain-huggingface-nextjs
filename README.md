@@ -1,105 +1,81 @@
-# LangChain Next.js Chatbot 🚀
 
-<div align="center">
-  <img src="https://assets.vercel.com/image/upload/v1662130559/nextjs/Icon_light_background.png" alt="Next.js" width="50" height="50" style="margin: 0 10px;" />
-  <img src="https://cdn.simpleicons.org/langchain/1C3C3C" alt="LangChain" width="50" height="50" style="margin: 0 10px;" />
-  <img src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg" alt="Hugging Face" width="50" height="50" style="margin: 0 10px;" />
-  <img src="https://cdn.jsdelivr.net/gh/get-convex/agent@main/test-assets/convex-logo.svg" alt="Convex" width="50" height="50" style="margin: 0 10px;" />
-</div>
+# LangChain + Hugging Face AI with Convex & Python BE using FastAPI
 
-<br/>
+![Next.js](https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![Convex](https://img.shields.io/badge/convex-4F46E5?style=for-the-badge&logo=convex&logoColor=white)
+![Python](https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/fastapi-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![LangChain](https://img.shields.io/badge/langchain-000000?style=for-the-badge&logo=langchain&logoColor=white)
+![Hugging Face](https://img.shields.io/badge/hugging%20face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)
 
-A modern, multi-provider AI chatbot built with Next.js, LangChain, and Convex. 
+A modern, polyglot AI application leveraging the reactive power of **Convex** and the robust AI orchestration capabilities of **Python (FastAPI & LangChain)**.
 
-This project provides a robust, real-time chat interface that seamlessly integrates with the world's most powerful LLMs from Hugging Face, OpenAI, Anthropic, and Google Generative AI—all through a unified LangChain architecture.
+## Architecture Overview
+This project uses a decoupled, polyglot backend architecture:
 
-## ✨ Features
+*   **Frontend:** Next.js (React) for a reactive, real-time UI.
+*   **Database:** Convex for schema-driven, real-time state management.
+*   **AI Backend:** Python (FastAPI) for advanced AI orchestration, streaming token support, and multi-provider integration (Hugging Face, OpenAI, Anthropic, Google).
 
-- **Multi-Provider Support**: Switch seamlessly between models from:
-  - 🤗 Hugging Face (Qwen, Llama, DeepSeek, Gemma)
-  - 🤖 OpenAI (GPT-4o, GPT-4o-mini)
-  - 🎭 Anthropic (Claude 3.5 Sonnet, Claude 3 Haiku)
-  - 🇬 Google Generative AI (Gemini 3.5 & 3.6 Flash)
-- **Real-Time Streaming**: fluid, typewriter-style token streaming for fast perceived performance.
-- **Persistent Chat History**: Vector database and real-time state syncing powered by [Convex](https://convex.dev/).
-- **Modern UI/UX**: Built with Next.js 16, React 19, Tailwind CSS v4, and Radix UI primitives.
-- **Markdown Support**: Renders code blocks, tables, and lists automatically using `react-markdown`.
-- **Dark Mode Ready**: Automatic light/dark mode switching via `next-themes`.
+## Getting Started
 
----
+### Prerequisites
+- Node.js (v18+)
+- Python (v3.13+)
+- Convex CLI installed
 
-## 🛠️ Tech Stack
+### Environment Configuration
+You need to configure two sets of environment variables:
 
-- **Framework**: [Next.js 16](https://nextjs.org/)
-- **AI/LLM Orchestration**: [LangChain.js](https://js.langchain.com/docs/get_started/introduction)
-- **Database & Backend**: [Convex](https://convex.dev/)
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **Package Manager**: [Bun](https://bun.sh/)
-- **Icons**: [Lucide React](https://lucide.dev/)
+1. **Frontend (`.env.local` at root):**
+   - Copy required Convex and API keys from your provider dashboard.
 
----
+2. **Backend (`python-service/.env`):**
+   - Copy the `python-service/.env.example` to `python-service/.env` and populate it with the same API keys required by your providers.
 
-## 🚀 Getting Started
+### Running the Project
+We have simplified the startup process. From the project root, simply run:
 
-### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/langchain-huggingface-nextjs.git
-cd langchain-huggingface-nextjs
-```
+chmod +x start.sh
+./start.sh
+# LangChain + Hugging Face AI with Convex & FastAPI
 
-### 2. Install Dependencies
-This project uses [Bun](https://bun.sh/) for ultra-fast dependency management.
+![Next.js](https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![Convex](https://img.shields.io/badge/convex-4F46E5?style=for-the-badge&logo=convex&logoColor=white)
+![Python](https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/fastapi-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![LangChain](https://img.shields.io/badge/langchain-000000?style=for-the-badge&logo=langchain&logoColor=white)
+![Hugging Face](https://img.shields.io/badge/hugging%20face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)
+
+A modern, polyglot AI application leveraging the reactive power of **Convex** and the robust AI orchestration capabilities of **Python (FastAPI & LangChain)**.
+
+## Architecture Overview
+This project uses a decoupled, polyglot backend architecture:
+
+*   **Frontend:** Next.js (React) for a reactive, real-time UI.
+*   **Database:** Convex for schema-driven, real-time state management.
+*   **AI Backend:** Python (FastAPI) for advanced AI orchestration, streaming token support, and multi-provider integration (Hugging Face, OpenAI, Anthropic, Google).
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v18+)
+- Python (v3.13+)
+- Convex CLI installed
+
+### Environment Configuration
+You need to configure two sets of environment variables:
+
+1. **Frontend (`.env.local` at root):**
+   - Copy required Convex and API keys from your provider dashboard.
+
+2. **Backend (`python-service/.env`):**
+   - Copy the `python-service/.env.example` to `python-service/.env` and populate it with the same API keys required by your providers.
+
+### Running the Project
+We have simplified the startup process. From the project root, simply run:
+
 ```bash
-bun install
-```
-
-### 3. Setup Environment Variables
-Create a `.env.local` file in the root directory and add your necessary API keys:
-
-```env
-# Required for database and backend
-NEXT_PUBLIC_CONVEX_URL="your-convex-project-url"
-
-# LLM Provider Keys (Add the ones you wish to use)
-HUGGINGFACE_API_KEY="hf_..."
-OPENAI_API_KEY="sk-..."
-ANTHROPIC_API_KEY="sk-ant-..."
-GOOGLE_API_KEY="AIza..."
-```
-
-### 4. Start the Convex Backend
-In a new terminal window, initialize your Convex database:
-```bash
-bun run convex:dev
-```
-
-### 5. Run the Development Server
-In your main terminal window, start the Next.js frontend:
-```bash
-bun run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to start chatting!
-
----
-
-## ⚙️ Configuration
-
-### Adding or Modifying Models
-
-You can easily add new models or change default fallbacks by editing `src/lib/ai/models.ts`. 
-
-```typescript
-export const AVAILABLE_MODELS = [
-  // ... existing models
-  { id: 'gpt-5', name: 'GPT-5', provider: 'openai' },
-];
-```
-
-The application automatically groups and displays available models in the UI dropdown based on their `provider` tag.
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+chmod +x start.sh
+./start.sh
