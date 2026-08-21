@@ -15,7 +15,7 @@ import { Send, Loader2, Trash2 } from 'lucide-react';
 import { useChat } from '@/hooks/use-chat';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { AVAILABLE_MODELS } from '@/lib/ai/models';
-import { toast } from 'sonner';
+import { ModelSelector } from './model-selector';
 
 interface ChatWindowProps {
   conversationId: Id<'conversations'>;
@@ -26,13 +26,8 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
   const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const {
-    messages,
-    streamingMessage,
-    isSending,
-    sendMessage,
-    clearMessages,
-  } = useChat(conversationId);
+  const { messages, streamingMessage, isSending, sendMessage, clearMessages } =
+    useChat(conversationId);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -47,39 +42,20 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
     if (!message || isSending) return;
 
     setInput('');
-    const selectedModelObj = AVAILABLE_MODELS.find(m => m.id === selectedModel);
+    const selectedModelObj = AVAILABLE_MODELS.find(
+      (m) => m.id === selectedModel,
+    );
     await sendMessage(message, selectedModel, selectedModelObj?.provider);
   };
 
   return (
     <Card className="w-full h-[700px] flex flex-col shadow-xl bg-white/60 border-zinc-200 dark:border-white/5 dark:bg-black/20 backdrop-blur-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-4">
-          <CardTitle className="text-xl font-bold">Switch Model:</CardTitle>
-          <select
-            value={selectedModel}
-            onChange={(e) => {
-              const newModelId = e.target.value;
-              setSelectedModel(newModelId);
-              const newModelObj = AVAILABLE_MODELS.find(m => m.id === newModelId);
-              if (newModelObj) {
-                toast.success(`Switched to ${newModelObj.name}`);
-              }
-            }}
-            disabled={isSending}
-            className="text-sm bg-white/50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-zinc-400"
-          >
-            {Array.from(new Set(AVAILABLE_MODELS.map(m => m.provider))).map(provider => (
-              <optgroup key={provider} label={provider.toUpperCase()}>
-                {AVAILABLE_MODELS.filter(m => m.provider === provider).map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </div>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-zinc-200 dark:border-white/5 mb-4">
+        <ModelSelector
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+          disabled={isSending}
+        />
         <Button
           variant="ghost"
           size="icon"
@@ -103,13 +79,13 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
           <MessageBubble key={msg._id} message={msg} />
         ))}
         {streamingMessage && (
-          <MessageBubble 
-            message={{ 
-              _id: 'streaming-msg', 
-              _creationTime: Date.now(), 
-              body: streamingMessage, 
-              author: 'ai' 
-            }} 
+          <MessageBubble
+            message={{
+              _id: 'streaming-msg',
+              _creationTime: Date.now(),
+              body: streamingMessage,
+              author: 'ai',
+            }}
           />
         )}
         {isSending && !streamingMessage && (

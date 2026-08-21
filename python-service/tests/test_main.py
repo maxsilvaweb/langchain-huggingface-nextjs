@@ -35,9 +35,9 @@ async def test_chat_endpoint():
         # Assert the content matches the joined streamed chunks
         assert response.content == b"Hello World"
         
-        # Verify that our chat service was called correctly to save messages
-        # 1. First, the user's message
-        mock_chat.save_interaction.assert_any_call("test-id", "hi", "user")
+        # Verify chat inference was invoked with correct parameters
+        mock_chat.get_chat_stream.assert_called_once_with("hi", "test-id", None, "huggingface")
         
-        # 2. Then, the fully accumulated AI response
-        mock_chat.save_interaction.assert_any_call("test-id", "Hello World", "ai")
+        # NOTE: save_interaction is intentionally NOT called from the Python backend.
+        # Message persistence is owned by the React client (use-chat.ts) to enable
+        # optimistic UI updates and to avoid double-writing into Convex.

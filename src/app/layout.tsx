@@ -38,7 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={suisseIntl.className}>
+      <body className={suisseIntl.className} suppressHydrationWarning>
         <Providers>
           {children}
           <Toaster />

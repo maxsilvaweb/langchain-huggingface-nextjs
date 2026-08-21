@@ -9,7 +9,7 @@ CONVEX_PID=$!
 echo "Starting Python Service..."
 cd python-service
 export PYTHONPATH=$PYTHONPATH:.
-./venv/bin/uvicorn main:app --port 8000 &
+./venv/bin/uvicorn main:app --port 8000 --reload --reload-dir . &
 PYTHON_PID=$!
 
 # Keep the script running to monitor processes

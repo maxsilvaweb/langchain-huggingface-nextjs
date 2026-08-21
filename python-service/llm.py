@@ -36,7 +36,7 @@ def get_chain(model_name: str = None, provider: str = "huggingface"):
         )
     else:  # huggingface (default)
         model = ChatOpenAI(
-            model=model_name or "Qwen/Qwen2.5-7B-Instruct",
+            model=model_name or "Qwen/Qwen2.5-72B-Instruct",
             openai_api_key=os.getenv("HUGGINGFACE_API_KEY"),
             openai_api_base="https://router.huggingface.co/v1",
             streaming=True,

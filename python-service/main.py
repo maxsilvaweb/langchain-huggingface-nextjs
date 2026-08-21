@@ -24,31 +24,23 @@ class ChatRequest(BaseModel):
 async def chat(request: ChatRequest):
     # Wrap the logic in a try-except block to handle and catch any errors gracefully
     try:
-        # 1. First, save the user's message to our database
-        chat_service.save_interaction(request.conversationId, request.message, "user")
-
-        # 2. Get the stream generator from the chat service
+        # 1. Get the stream generator from the chat service
         # This function starts the interaction with the AI and prepares to stream the response
+        # NOTE: Message persistence is handled by the React client to avoid double inserts
+        # and for optimistic UI. Python only performs inference.
         async_gen = chat_service.get_chat_stream(
             request.message, request.conversationId, request.modelName, request.provider
         )
 
-        # 3. Define a helper function to handle the streaming of the AI response
+        # 2. Define a helper function to handle the streaming of the AI response
         # This is an asynchronous generator function
         async def stream_generator():
-            full_response = "" # Variable to accumulate the full response for saving later
-            
             # Iterate over the stream as it produces chunks of text
             async for chunk in async_gen:
-                full_response += chunk # Build the full response string as we receive chunks
-                
                 # Send the chunk back to the client immediately (encoded as bytes)
                 yield chunk.encode("utf-8")
-            
-            # 4. Once the stream is finished, save the full completed AI response to the database
-            chat_service.save_interaction(request.conversationId, full_response, "ai")
 
-        # 5. Return a StreamingResponse to the client
+        # 3. Return a StreamingResponse to the client
         # This tells the client to expect a continuous stream of data
         return StreamingResponse(stream_generator(), media_type="text/event-stream")
     
