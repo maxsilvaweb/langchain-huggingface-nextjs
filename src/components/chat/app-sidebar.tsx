@@ -216,7 +216,7 @@ export function AppSidebar() {
           <AppDialogFooter
             cancelText="Cancel"
             confirmText="Save"
-            confirmTheme="default"
+            confirmTheme="green"
             confirmIcon={Pencil}
             onCancel={() => setRenamingId(null)}
             onConfirm={handleRename}

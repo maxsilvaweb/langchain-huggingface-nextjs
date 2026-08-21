@@ -14,7 +14,8 @@ import { ActionButton } from './action-button';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 
-type DialogTheme = 'default' | 'danger';
+type DialogTheme =
+  'default' | 'danger' | 'green' | 'red' | 'blue' | 'amber' | 'zinc';
 type DialogSize = 'sm' | 'md' | 'lg';
 
 interface AppDialogFooterProps {
@@ -73,7 +74,13 @@ export function AppDialogFooter({
           <ActionButton
             icon={confirmIcon}
             label={confirmText}
-            theme={confirmTheme === 'danger' ? 'red' : 'zinc'}
+            theme={
+              confirmTheme === 'danger'
+                ? 'red'
+                : confirmTheme === 'default'
+                  ? 'zinc'
+                  : confirmTheme
+            }
             onClick={onConfirm}
             disabled={confirmLoading}
             className="!w-auto !shadow-none"

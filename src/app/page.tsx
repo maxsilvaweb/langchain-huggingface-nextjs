@@ -69,16 +69,13 @@ export default function Home() {
         </header>
         <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-24 bg-background">
           <div className="z-10 w-full max-w-4xl flex flex-col gap-8 md:gap-10">
-            <div className="hidden md:flex flex-row justify-between items-start gap-4">
-              <div className="text-left space-y-4">
-                <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
-                  {APP_NAME}
-                </h1>
-                <p className="text-xl text-muted-foreground leading-relaxed">
-                  {APP_DESCRIPTION}
-                </p>
-              </div>
-              <ThemeToggle />
+            <div className="w-full text-left space-y-3 md:space-y-4">
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
+                {APP_NAME}
+              </h1>
+              <p className="text-base md:text-xl text-muted-foreground leading-relaxed">
+                {APP_DESCRIPTION}
+              </p>
             </div>
 
             {isReady && conversationId ? (

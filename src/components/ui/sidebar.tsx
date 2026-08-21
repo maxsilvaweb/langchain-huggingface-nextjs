@@ -187,19 +187,23 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) bg-zinc-950 dark:bg-zinc-950 p-0 text-oklch(0.145 0 0) dark:text-oklch(0.985 0 0) [&>button[aria-label='Close']]:right-3 [&>button[aria-label='Close']]:top-3 [&>button[aria-label='Close']]:z-10 [&>button[aria-label='Close']]:text-white/60 [&>button[aria-label='Close']]:hover:text-white [&>button[aria-label='Close']]:hover:bg-white/10 [&>button[aria-label='Close']]:size-8"
-          style={
-            {
-              '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
+          className="w-(--sidebar-width) bg-zinc-950 dark:bg-zinc-950 p-0 text-oklch(0.145 0 0) dark:text-oklch(0.985 0 0) [&>button]:hidden"
+          style={{
+            ['--sidebar-width' as any]: SIDEBAR_WIDTH_MOBILE,
+            top: '56px',
+            height: 'calc(100dvh - 56px)',
+          }}
           side={side}
+          overlayClassName="pointer-events-none"
+          overlayStyle={{ top: '56px' }}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-full flex-col border-r border-white/10">
+            {children}
+          </div>
         </SheetContent>
       </Sheet>
     );

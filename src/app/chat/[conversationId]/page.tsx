@@ -14,7 +14,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import { useChat } from '@/hooks/use-chat';
 import { useChatSession } from '@/hooks/use-chat-session';
@@ -48,11 +48,9 @@ export default function ChatPage() {
     AVAILABLE_MODELS[0];
 
   // Detect stale / phantom conversation IDs (e.g. lingering in URL/localStorage
-
-  // Detect stale / phantom conversation IDs (e.g. lingering in URL/localStorage
   // after a Convex schema reset or env switch).
   //
-  // Key guards (prevents spurious creates during boot:
+  // Key guards (prevents spurious creates during mount):
   //   conversation === undefined → Convex is still loading → do NOTHING.
   //   conversation === null    → Convex confirmed row absent → redirect to new.
   //   sessionReady          → useChatSession mount done, startNewSession is safe.
@@ -136,32 +134,36 @@ export default function ChatPage() {
           <div className="z-10 w-full max-w-4xl flex flex-col gap-8 md:gap-10">
             {isEmptyThread ? (
               <>
-                <div className="hidden md:flex flex-row justify-between items-start gap-4">
-                  <div className="text-left space-y-4">
-                    <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
-                      {APP_NAME}
-                    </h1>
-                    <p className="text-xl text-muted-foreground leading-relaxed">
-                      {APP_DESCRIPTION}
-                    </p>
-                  </div>
-                  <ThemeToggle />
+                <div className="w-full text-left space-y-3 md:space-y-4">
+                  <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
+                    {APP_NAME}
+                  </h1>
+                  <p className="text-base md:text-xl text-muted-foreground leading-relaxed">
+                    {APP_DESCRIPTION}
+                  </p>
                 </div>
 
                 <form onSubmit={handleHeroSubmit} className="w-full space-y-4">
-                  <div className="relative flex w-full items-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm shadow-xl focus-within:ring-2 focus-within:ring-zinc-400/40 transition-all">
-                    <Input
+                  <div className="relative w-full rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm shadow-xl focus-within:ring-2 focus-within:ring-zinc-400/40 transition-all">
+                    <Textarea
                       value={heroInput}
                       onChange={(e) => setHeroInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleHeroSubmit(e as unknown as React.FormEvent);
+                        }
+                      }}
                       placeholder="How can I help you today?"
                       disabled={isSending}
-                      className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-16 px-6 pr-[4.5rem] text-base rounded-2xl"
+                      rows={4}
+                      className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 min-h-[140px] md:min-h-[180px] px-5 md:px-6 pt-4 pb-5 pr-[4.5rem] resize-y text-base md:text-[15px] leading-relaxed rounded-2xl placeholder:text-zinc-500/80"
                     />
                     <Button
                       type="submit"
                       size="icon"
                       disabled={isSending || !heroInput.trim()}
-                      className="group absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-xl cursor-pointer border border-emerald-700/40 bg-emerald-900/50 text-emerald-200 hover:bg-emerald-700/70 hover:text-white hover:border-emerald-500/60 hover:shadow-2xl hover:shadow-emerald-500/20 hover:brightness-110 hover:-translate-y-[calc(50%+1px)] hover:scale-[1.04] active:scale-[0.97] active:brightness-95 shadow-lg shadow-emerald-900/20 backdrop-blur-sm transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none disabled:hover:scale-100 disabled:hover:brightness-100"
+                      className="group absolute right-3 bottom-3 h-10 w-10 rounded-xl cursor-pointer border border-emerald-700/40 bg-emerald-900/50 text-emerald-200 hover:bg-emerald-700/70 hover:text-white hover:border-emerald-500/60 hover:shadow-2xl hover:shadow-emerald-500/20 hover:brightness-110 hover:scale-[1.04] hover:-translate-y-0.5 active:scale-[0.97] active:translate-y-0 active:brightness-95 shadow-lg shadow-emerald-900/20 backdrop-blur-sm transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none disabled:hover:scale-100 disabled:hover:translate-y-0 disabled:hover:brightness-100"
                       style={{
                         cursor:
                           isSending || !heroInput.trim()
@@ -191,11 +193,11 @@ export default function ChatPage() {
               </>
             ) : (
               <>
-                <div className="hidden md:flex text-left space-y-4">
-                  <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
+                <div className="w-full text-left space-y-3 md:space-y-4">
+                  <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
                     {APP_NAME}
                   </h1>
-                  <p className="text-xl text-muted-foreground leading-relaxed">
+                  <p className="text-base md:text-xl text-muted-foreground leading-relaxed">
                     {APP_DESCRIPTION}
                   </p>
                 </div>
