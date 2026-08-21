@@ -22,6 +22,7 @@ import { AVAILABLE_MODELS } from '@/lib/ai/models';
 import { Id } from '../../../../convex/_generated/dataModel';
 import { ModelSelector } from '@/components/chat/model-selector';
 import { APP_DESCRIPTION, APP_NAME } from '@/lib/locale';
+import { cn } from '@/lib/utils';
 
 export default function ChatPage() {
   const params = useParams();
@@ -116,8 +117,15 @@ export default function ChatPage() {
   return (
     <SidebarProvider defaultOpen={true}>
       <AppSidebar />
-      <SidebarInset className="bg-transparent">
-        <header className="md:hidden sticky top-0 z-[60] flex h-14 items-center justify-between gap-2 border-b border-white/10 bg-background/95 px-3 backdrop-blur-xl">
+      <SidebarInset
+        className={cn(
+          'bg-transparent',
+          isEmptyThread
+            ? 'min-h-screen'
+            : 'h-screen flex flex-col overflow-hidden',
+        )}
+      >
+        <header className="md:hidden shrink-0 z-[60] flex h-14 items-center justify-between gap-2 border-b border-white/10 bg-background/95 px-3 backdrop-blur-xl">
           <div className="flex items-center gap-2">
             <SidebarTrigger
               className="size-8 cursor-pointer hover:bg-white/10"
@@ -130,8 +138,22 @@ export default function ChatPage() {
           </div>
           <ThemeToggle />
         </header>
-        <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-24 bg-background">
-          <div className="z-10 w-full max-w-4xl flex flex-col gap-8 md:gap-10">
+        <main
+          className={cn(
+            'flex flex-col bg-background',
+            isEmptyThread
+              ? 'min-h-screen items-center justify-center p-4 md:p-24'
+              : 'flex-1 min-h-0 overflow-hidden items-stretch justify-start p-0 md:p-0',
+          )}
+        >
+          <div
+            className={cn(
+              'z-10 w-full flex flex-col',
+              isEmptyThread
+                ? 'max-w-4xl gap-8 md:gap-10'
+                : 'h-full flex-1 min-h-0',
+            )}
+          >
             {isEmptyThread ? (
               <>
                 <div className="w-full text-left space-y-3 md:space-y-4">
@@ -192,18 +214,7 @@ export default function ChatPage() {
                 </form>
               </>
             ) : (
-              <>
-                <div className="w-full text-left space-y-3 md:space-y-4">
-                  <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
-                    {APP_NAME}
-                  </h1>
-                  <p className="text-base md:text-xl text-muted-foreground leading-relaxed">
-                    {APP_DESCRIPTION}
-                  </p>
-                </div>
-
-                <ChatWindow conversationId={conversationId} />
-              </>
+              <ChatWindow conversationId={conversationId} />
             )}
           </div>
         </main>
