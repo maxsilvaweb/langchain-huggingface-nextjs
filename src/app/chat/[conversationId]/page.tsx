@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import { ChatWindow } from '@/components/chat/chat-window';
 import { AppSidebar } from '@/components/chat/app-sidebar';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowUp, Loader2 } from 'lucide-react';
+import { ArrowUp, Loader2, Trash2 } from 'lucide-react';
 import { useChat } from '@/hooks/use-chat';
 import { useChatSession } from '@/hooks/use-chat-session';
 import { AVAILABLE_MODELS } from '@/lib/ai/models';
@@ -23,6 +23,8 @@ import { Id } from '../../../../convex/_generated/dataModel';
 import { ModelSelector } from '@/components/chat/model-selector';
 import { APP_DESCRIPTION, APP_NAME } from '@/lib/locale';
 import { cn } from '@/lib/utils';
+import { AppDialog, AppDialogFooter } from '@/components/ui/app-dialog';
+import { toast } from 'sonner';
 
 export default function ChatPage() {
   const params = useParams();
@@ -30,8 +32,6 @@ export default function ChatPage() {
   const conversationId = params.conversationId as Id<'conversations'>;
   const hasEnv = !!process.env.NEXT_PUBLIC_CONVEX_URL;
 
-  // Chat-detail pages already have a conversation id in the URL — do NOT auto-create
-  // a session row on mount. The page validates the URL id instead.
   const {
     conversationId: sessionConversationId,
     startNewSession,
@@ -43,6 +43,8 @@ export default function ChatPage() {
   const [selectedModelId, setSelectedModelId] = useState(
     AVAILABLE_MODELS[0].id,
   );
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const removeConversation = useMutation(api.conversations.remove);
 
   const selectedModel =
     AVAILABLE_MODELS.find((m) => m.id === selectedModelId) ||
@@ -102,6 +104,24 @@ export default function ChatPage() {
     await sendMessage(text, selectedModel.id, selectedModel.provider);
   };
 
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    try {
+      const idToDelete = deletingId;
+      await removeConversation({
+        conversationId: idToDelete as Id<'conversations'>,
+      });
+      if (conversationId === idToDelete) {
+        router.push('/');
+      }
+      setDeletingId(null);
+      toast.success('Conversation deleted');
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
+      toast.error('Failed to delete conversation');
+    }
+  };
+
   if (!hasEnv) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-8 md:p-24">
@@ -116,7 +136,7 @@ export default function ChatPage() {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <AppSidebar />
+      <AppSidebar deletingId={deletingId} setDeletingId={setDeletingId} />
       <SidebarInset
         className={cn(
           'bg-transparent',
@@ -214,11 +234,31 @@ export default function ChatPage() {
                 </form>
               </>
             ) : (
-              <ChatWindow conversationId={conversationId} />
+              <ChatWindow
+                conversationId={conversationId}
+                onDeleteChat={() => setDeletingId(conversationId)}
+              />
             )}
           </div>
         </main>
       </SidebarInset>
+
+      <AppDialog
+        open={!!deletingId}
+        onOpenChange={(open) => !open && setDeletingId(null)}
+        title="Delete Conversation"
+        description="Are you sure you want to delete this conversation? This action cannot be undone."
+        footer={
+          <AppDialogFooter
+            cancelText="Cancel"
+            confirmText="Delete"
+            confirmTheme="danger"
+            confirmIcon={Trash2}
+            onCancel={() => setDeletingId(null)}
+            onConfirm={confirmDelete}
+          />
+        }
+      />
     </SidebarProvider>
   );
 }

@@ -13,16 +13,17 @@ import { cn } from '@/lib/utils';
 
 interface ChatWindowProps {
   conversationId: Id<'conversations'>;
+  onDeleteChat?: () => void;
 }
 
-export function ChatWindow({ conversationId }: ChatWindowProps) {
+export function ChatWindow({ conversationId, onDeleteChat }: ChatWindowProps) {
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [hasOverflow, setHasOverflow] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { messages, streamingMessage, isSending, sendMessage, clearMessages } =
+  const { messages, streamingMessage, isSending, sendMessage } =
     useChat(conversationId);
 
   const measureMetrics = () => {
@@ -158,11 +159,11 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => void clearMessages()}
-              title="Clear chat"
-              aria-label="Clear chat history"
-              disabled={isSending}
-              className="cursor-pointer text-white/40 hover:text-white hover:bg-white/5"
+              onClick={onDeleteChat}
+              title="Delete conversation"
+              aria-label="Delete conversation"
+              disabled={isSending || !onDeleteChat}
+              className="cursor-pointer text-white/40 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

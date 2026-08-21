@@ -45,10 +45,17 @@ import {
   SIDEBAR_LABEL_RECENT_CHATS,
 } from '@/lib/locale';
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  deletingId?: string | null;
+  setDeletingId?: (id: string | null) => void;
+}
+
+export function AppSidebar({
+  deletingId: _deletingId,
+  setDeletingId,
+}: AppSidebarProps) {
   const conversations = useQuery(api.conversations.list);
   const emptyConversationId = useQuery(api.conversations.getFirstEmpty);
-  const removeConversation = useMutation(api.conversations.remove);
   const updateTitle = useMutation(api.conversations.updateTitle);
 
   const params = useParams();
@@ -58,13 +65,11 @@ export function AppSidebar() {
   const { isMobile, setOpenMobile } = useSidebar();
 
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
-  const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [newTitle, setNewTitle] = React.useState('');
 
   const handleNewChat = async () => {
     try {
       if (isMobile) setOpenMobile(false);
-      // Safeguard: If there's already an empty conversation, just go to it
       if (emptyConversationId) {
         router.push(`/chat/${emptyConversationId}`);
         return;
@@ -81,26 +86,6 @@ export function AppSidebar() {
   const handleSelectConversation = (id: string) => {
     if (isMobile) setOpenMobile(false);
     router.push(`/chat/${id}`);
-  };
-
-  const confirmDelete = async () => {
-    if (!deletingId) return;
-    try {
-      const idToDelete = deletingId;
-      await removeConversation({ conversationId: idToDelete as any });
-      if (conversationId === idToDelete) {
-        router.push('/');
-      }
-      setDeletingId(null);
-      toast.success('Conversation deleted');
-    } catch (err) {
-      console.error('Failed to delete conversation:', err);
-      toast.error('Failed to delete conversation');
-    }
-  };
-
-  const handleDelete = (id: string) => {
-    setDeletingId(id);
   };
 
   const handleRename = async () => {
@@ -183,8 +168,9 @@ export function AppSidebar() {
                         Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleDelete(conv._id)}
-                        className="gap-2 cursor-pointer text-red-400 focus:bg-red-400/10 focus:text-red-400"
+                        onClick={() => setDeletingId?.(conv._id)}
+                        disabled={!setDeletingId}
+                        className="gap-2 cursor-pointer text-red-400 focus:bg-red-400/10 focus:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <Trash2 className="h-4 w-4" />
                         Delete
@@ -234,23 +220,6 @@ export function AppSidebar() {
           />
         </div>
       </AppDialog>
-
-      <AppDialog
-        open={!!deletingId}
-        onOpenChange={(open) => !open && setDeletingId(null)}
-        title="Delete Conversation"
-        description="Are you sure you want to delete this conversation? This action cannot be undone."
-        footer={
-          <AppDialogFooter
-            cancelText="Cancel"
-            confirmText="Delete"
-            confirmTheme="danger"
-            confirmIcon={Trash2}
-            onCancel={() => setDeletingId(null)}
-            onConfirm={confirmDelete}
-          />
-        }
-      />
 
       <SidebarFooter className="p-4 flex flex-col gap-4">
         <Separator className="bg-white/10" />
