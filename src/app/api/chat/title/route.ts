@@ -2,6 +2,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { PROVIDER_FALLBACK_MODELS } from '@/lib/ai/models';
+import { DEFAULT_CONVERSATION_TITLE } from '@/lib/locale';
 
 export async function POST(req: Request) {
   try {
@@ -40,10 +41,11 @@ export async function POST(req: Request) {
 
     const chain = prompt.pipe(model).pipe(new StringOutputParser());
     const rawTitle = await chain.invoke({ input: message });
-    const title = rawTitle
-      .trim()
-      .replace(/^["'“”]+|["'“”.]+$/g, '')
-      .trim() || 'New Chat';
+    const title =
+      rawTitle
+        .trim()
+        .replace(/^["'“”]+|["'“”.]+$/g, '')
+        .trim() || DEFAULT_CONVERSATION_TITLE;
 
     return new Response(JSON.stringify({ title }), {
       headers: { 'Content-Type': 'application/json' },
@@ -54,7 +56,10 @@ export async function POST(req: Request) {
       error instanceof Error
         ? { name: error.name, message: error.message, stack: error.stack }
         : error;
-    console.error('[title-api] Title generation error:', JSON.stringify(detail, null, 2));
+    console.error(
+      '[title-api] Title generation error:',
+      JSON.stringify(detail, null, 2),
+    );
     return new Response(JSON.stringify({ error: 'Failed to generate title' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

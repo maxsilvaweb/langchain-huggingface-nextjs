@@ -5,6 +5,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Doc, Id } from '../../convex/_generated/dataModel';
 import { toast } from 'sonner';
+import { DEFAULT_CONVERSATION_TITLE } from '@/lib/locale';
 
 type ChatMessage = Doc<'messages'>;
 
@@ -73,7 +74,10 @@ export function useChat(conversationId: Id<'conversations'>) {
               if (!res.ok) throw new Error(`title HTTP ${res.status}`);
               const data = await res.json().catch(() => null);
               const title = data?.title?.trim();
-              if (title && title.toLowerCase() !== 'new chat') {
+              if (
+                title &&
+                title.toLowerCase() !== DEFAULT_CONVERSATION_TITLE.toLowerCase()
+              ) {
                 await updateTitleMutation({ conversationId, title });
                 return;
               }

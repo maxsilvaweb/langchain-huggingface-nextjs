@@ -49,7 +49,7 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
   };
 
   return (
-    <Card className="w-full h-[700px] flex flex-col shadow-xl bg-white/60 border-zinc-200 dark:border-white/5 dark:bg-black/20 backdrop-blur-sm">
+    <Card className="w-full h-[600px] md:h-[700px] flex flex-col shadow-xl bg-white/60 border-zinc-200 dark:border-white/5 dark:bg-black/20 backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-zinc-200 dark:border-white/5 mb-4">
         <ModelSelector
           selectedModel={selectedModel}
@@ -61,7 +61,9 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
           size="icon"
           onClick={() => void clearMessages()}
           title="Clear chat"
+          aria-label="Clear chat history"
           disabled={isSending}
+          className="cursor-pointer"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -106,11 +108,21 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
             disabled={isSending}
             className="flex-1"
           />
-          <Button type="submit" disabled={isSending || !input.trim()}>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={isSending || !input.trim()}
+            className="group h-10 w-10 rounded-xl cursor-pointer border border-emerald-700/40 bg-emerald-900/50 text-emerald-200 hover:bg-emerald-700/70 hover:text-white hover:border-emerald-500/60 hover:shadow-2xl hover:shadow-emerald-500/20 hover:brightness-110 hover:-translate-y-0.5 hover:scale-[1.04] active:translate-y-0 active:scale-[0.97] active:brightness-95 shadow-lg shadow-emerald-900/20 backdrop-blur-sm transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none disabled:hover:scale-100 disabled:hover:translate-y-0 disabled:hover:brightness-100"
+            style={{
+              cursor: isSending || !input.trim() ? 'default' : 'pointer',
+            }}
+            aria-label="Send message"
+            title="Send message"
+          >
             {isSending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:-translate-x-0.5 group-active:translate-y-0 group-active:translate-x-0" />
             )}
           </Button>
         </form>

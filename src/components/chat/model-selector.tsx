@@ -43,10 +43,12 @@ export function ModelSelector({
       >
         <SelectTrigger
           className={cn(
-            'w-[240px] rounded-xl h-9 transition-all duration-200',
+            'w-[240px] rounded-xl h-9 transition-all duration-200 cursor-pointer',
             'bg-white/50 dark:bg-black/50 border-zinc-200 dark:border-white/10',
             triggerClassName,
           )}
+          aria-label="Select AI model"
+          title="Select AI model"
         >
           <Bot className="h-3.5 w-3.5 mr-2 text-zinc-400" />
           <SelectValue placeholder="Select a model" />

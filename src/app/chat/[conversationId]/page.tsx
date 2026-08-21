@@ -8,7 +8,11 @@ import { ChatWindow } from '@/components/chat/chat-window';
 import { AppSidebar } from '@/components/chat/app-sidebar';
 import { SetupNotice } from '@/components/setup-notice';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowUp, Loader2 } from 'lucide-react';
@@ -17,6 +21,7 @@ import { useChatSession } from '@/hooks/use-chat-session';
 import { AVAILABLE_MODELS } from '@/lib/ai/models';
 import { Id } from '../../../../convex/_generated/dataModel';
 import { ModelSelector } from '@/components/chat/model-selector';
+import { APP_DESCRIPTION, APP_NAME } from '@/lib/locale';
 
 export default function ChatPage() {
   const params = useParams();
@@ -114,17 +119,30 @@ export default function ChatPage() {
     <SidebarProvider defaultOpen={true}>
       <AppSidebar />
       <SidebarInset className="bg-transparent">
-        <main className="flex min-h-screen flex-col items-center justify-center p-8 md:p-24">
-          <div className="z-10 w-full max-w-4xl flex flex-col gap-10">
+        <header className="md:hidden sticky top-0 z-[60] flex h-14 items-center justify-between gap-2 border-b border-white/10 bg-background/95 px-3 backdrop-blur-xl">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger
+              className="size-8 cursor-pointer hover:bg-white/10"
+              title="Open conversation history"
+              aria-label="Open conversation history"
+            />
+            <span className="text-sm font-semibold tracking-tight text-foreground truncate">
+              {APP_NAME}
+            </span>
+          </div>
+          <ThemeToggle />
+        </header>
+        <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-24 bg-background">
+          <div className="z-10 w-full max-w-4xl flex flex-col gap-8 md:gap-10">
             {isEmptyThread ? (
               <>
-                <div className="flex flex-row justify-between items-start gap-4">
+                <div className="hidden md:flex flex-row justify-between items-start gap-4">
                   <div className="text-left space-y-4">
                     <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
-                      LangChain + Hugging Face AI
+                      {APP_NAME}
                     </h1>
                     <p className="text-xl text-muted-foreground leading-relaxed">
-                      Modern real-time AI infrastructure with Convex.
+                      {APP_DESCRIPTION}
                     </p>
                   </div>
                   <ThemeToggle />
@@ -135,21 +153,28 @@ export default function ChatPage() {
                     <Input
                       value={heroInput}
                       onChange={(e) => setHeroInput(e.target.value)}
-                      placeholder="Send a message to start a new conversation..."
+                      placeholder="How can I help you today?"
                       disabled={isSending}
-                      className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-16 px-6 pr-16 text-base rounded-2xl"
+                      className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-16 px-6 pr-[4.5rem] text-base rounded-2xl"
                     />
                     <Button
                       type="submit"
                       size="icon"
                       disabled={isSending || !heroInput.trim()}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-xl"
+                      className="group absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-xl cursor-pointer border border-emerald-700/40 bg-emerald-900/50 text-emerald-200 hover:bg-emerald-700/70 hover:text-white hover:border-emerald-500/60 hover:shadow-2xl hover:shadow-emerald-500/20 hover:brightness-110 hover:-translate-y-[calc(50%+1px)] hover:scale-[1.04] active:scale-[0.97] active:brightness-95 shadow-lg shadow-emerald-900/20 backdrop-blur-sm transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none disabled:hover:scale-100 disabled:hover:brightness-100"
+                      style={{
+                        cursor:
+                          isSending || !heroInput.trim()
+                            ? 'default'
+                            : 'pointer',
+                      }}
                       aria-label="Send message"
+                      title="Send message"
                     >
                       {isSending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <ArrowUp className="h-4 w-4" />
+                        <ArrowUp className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-active:translate-y-0" />
                       )}
                     </Button>
                   </div>
@@ -166,12 +191,12 @@ export default function ChatPage() {
               </>
             ) : (
               <>
-                <div className="text-left space-y-4">
+                <div className="hidden md:flex text-left space-y-4">
                   <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
-                    LangChain + Hugging Face AI
+                    {APP_NAME}
                   </h1>
                   <p className="text-xl text-muted-foreground leading-relaxed">
-                    Modern real-time AI infrastructure with Convex.
+                    {APP_DESCRIPTION}
                   </p>
                 </div>
 
