@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/sonner';
+import { APP_DESCRIPTION, APP_NAME } from '@/lib/locale';
 import './globals.css';
 
 const suisseIntl = localFont({
@@ -27,8 +28,8 @@ const suisseIntl = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'LangChain + Hugging Face AI',
-  description: 'Modern real-time AI infrastructure with Convex.',
+  title: APP_NAME,
+  description: APP_DESCRIPTION,
 };
 
 export default function RootLayout({
@@ -38,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={suisseIntl.className}>
+      <body className={suisseIntl.className} suppressHydrationWarning>
         <Providers>
           {children}
           <Toaster />
