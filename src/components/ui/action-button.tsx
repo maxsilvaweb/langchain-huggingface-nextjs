@@ -16,6 +16,7 @@ interface ActionButtonProps extends Omit<ButtonProps, 'variant'> {
   theme?: ThemeColor;
   className?: string;
   disabledIcon?: LucideIcon;
+  shortcut?: string[];
 }
 
 const themeStyles: Record<
@@ -65,6 +66,7 @@ export function ActionButton({
   className,
   disabled,
   disabledIcon: DisabledIcon = Ban,
+  shortcut,
   ...props
 }: ActionButtonProps) {
   const styles = themeStyles[theme];
@@ -107,7 +109,23 @@ export function ActionButton({
           )}
         </span>
       )}
-      <span className="translate-y-[1px] font-medium">{label}</span>
+      <span className="translate-y-px font-medium">{label}</span>
+      {shortcut?.length ? (
+        <span className="ml-auto hidden items-center gap-1.5 md:flex">
+          {shortcut.map((key) => (
+            <kbd
+              key={key}
+              className={cn(
+                'inline-flex min-w-5 items-center justify-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em]',
+                'border-black/10 bg-white/65 text-current shadow-sm dark:border-white/10 dark:bg-white/6',
+                key === '⌘' && 'text-xs tracking-normal',
+              )}
+            >
+              {key}
+            </kbd>
+          ))}
+        </span>
+      ) : null}
     </Button>
   );
 }

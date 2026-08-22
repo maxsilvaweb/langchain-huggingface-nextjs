@@ -43,10 +43,21 @@ import {
   DEFAULT_CONVERSATION_TITLE,
   SIDEBAR_LABEL_RECENT_CHATS,
 } from '@/lib/locale';
+import { NEW_CHAT_SHORTCUT_KEY } from '@/lib/globals';
 
 interface AppSidebarProps {
   deletingId?: string | null;
   setDeletingId?: (id: string | null) => void;
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return (
+    target.isContentEditable ||
+    ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+    Boolean(target.closest('[contenteditable="true"]'))
+  );
 }
 
 export function AppSidebar({
@@ -66,6 +77,7 @@ export function AppSidebar({
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [newTitle, setNewTitle] = React.useState('');
   const [isCreating, setIsCreating] = React.useState(false);
+  const [isApplePlatform, setIsApplePlatform] = React.useState(false);
 
   const isConvexLoading =
     conversations === undefined || emptyConversationId === undefined;
@@ -73,7 +85,36 @@ export function AppSidebar({
   const hasEmptyChat = !!emptyConversationId;
   const emptyChatActive = emptyConversationId === conversationId;
 
-  const handleNewChat = async () => {
+  React.useEffect(() => {
+    setIsApplePlatform(
+      /Macintosh|Mac OS X|iPhone|iPad/.test(navigator.userAgent),
+    );
+  }, []);
+
+  const newChatShortcutKeys = React.useMemo(
+    () =>
+      isApplePlatform
+        ? ['⌘', NEW_CHAT_SHORTCUT_KEY.toUpperCase()]
+        : ['Ctrl', NEW_CHAT_SHORTCUT_KEY.toUpperCase()],
+    [isApplePlatform],
+  );
+
+  const newChatShortcutLabel = React.useMemo(
+    () => newChatShortcutKeys.join(' + '),
+    [newChatShortcutKeys],
+  );
+
+  const newChatActionLabel = isCreating
+    ? 'Creating new chat…'
+    : isConvexLoading
+      ? 'Loading conversations…'
+      : hasEmptyChat
+        ? emptyChatActive
+          ? `You already have an empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} open`
+          : `An empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} already exists — send a message first to unlock a new one`
+        : `Create new chat (${newChatShortcutLabel})`;
+
+  const handleNewChat = React.useCallback(async () => {
     if (isCreating || isConvexLoading || hasEmptyChat) return;
     try {
       setIsCreating(true);
@@ -91,7 +132,42 @@ export function AppSidebar({
     } finally {
       setIsCreating(false);
     }
-  };
+  }, [
+    emptyConversationId,
+    hasEmptyChat,
+    isConvexLoading,
+    isCreating,
+    isMobile,
+    router,
+    setOpenMobile,
+    startNewSession,
+  ]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const hasPrimaryModifier = isApplePlatform ? event.metaKey : event.ctrlKey;
+      const hasOnlyExpectedModifiers = isApplePlatform
+        ? !event.ctrlKey && !event.altKey && !event.shiftKey
+        : !event.metaKey && !event.altKey && !event.shiftKey;
+
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        isEditableTarget(event.target) ||
+        !hasOnlyExpectedModifiers ||
+        !hasPrimaryModifier ||
+        event.key.toLowerCase() !== NEW_CHAT_SHORTCUT_KEY
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      void handleNewChat();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleNewChat, isApplePlatform]);
 
   const handleSelectConversation = (id: string) => {
     if (isMobile) setOpenMobile(false);
@@ -122,29 +198,10 @@ export function AppSidebar({
           icon={Plus}
           label={DEFAULT_CONVERSATION_TITLE}
           theme="green"
+          shortcut={newChatShortcutKeys}
           disabled={isCreating || isConvexLoading || hasEmptyChat}
-          aria-label={
-            isCreating
-              ? 'Creating new chat…'
-              : isConvexLoading
-                ? 'Loading conversations…'
-                : hasEmptyChat
-                  ? emptyChatActive
-                    ? `You already have an empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} open`
-                    : `An empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} already exists — send a message first to unlock a new one`
-                  : 'Create new chat'
-          }
-          title={
-            isCreating
-              ? 'Creating new chat…'
-              : isConvexLoading
-                ? 'Loading conversations…'
-                : hasEmptyChat
-                  ? emptyChatActive
-                    ? `You already have an empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} open`
-                    : `An empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} already exists — send a message first to unlock a new one`
-                  : 'Create new chat'
-          }
+          aria-label={newChatActionLabel}
+          title={newChatActionLabel}
         />
       </SidebarHeader>
 

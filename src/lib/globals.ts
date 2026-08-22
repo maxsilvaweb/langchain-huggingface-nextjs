@@ -8,3 +8,5 @@ export const MOBILE_BREAKPOINT_PX = 768;
 
 export const CHAT_SCROLL_BOTTOM_THRESHOLD_PX = 8;
 export const CHAT_SCROLL_OVERFLOW_THRESHOLD_PX = 80;
+
+export const NEW_CHAT_SHORTCUT_KEY = 'k';
