@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { Bot } from 'lucide-react';
 import { AVAILABLE_MODELS } from '@/lib/ai/models';
 import { toast } from 'sonner';

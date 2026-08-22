@@ -1,7 +1,6 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { PROVIDER_FALLBACK_MODELS } from '@/lib/ai/models';
 import { DEFAULT_CONVERSATION_TITLE } from '@/lib/locale';
 
 export async function POST(req: Request) {

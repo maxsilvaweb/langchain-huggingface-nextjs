@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../../../convex/_generated/api';
+import { api } from '@/lib/convex/api';
 import { ChatWindow } from '@/components/chat/chat-window';
 import { AppSidebar } from '@/components/chat/app-sidebar';
 import { SetupNotice } from '@/components/setup-notice';
@@ -19,7 +19,8 @@ import { ArrowUp, Loader2, Trash2 } from 'lucide-react';
 import { useChat } from '@/hooks/use-chat';
 import { useChatSession } from '@/hooks/use-chat-session';
 import { AVAILABLE_MODELS } from '@/lib/ai/models';
-import { Id } from '../../../../convex/_generated/dataModel';
+import type { Id } from '@/lib/convex/dataModel';
+import { CHAT_SESSION_STORAGE_KEY } from '@/lib/globals';
 import { ModelSelector } from '@/components/chat/model-selector';
 import { APP_DESCRIPTION, APP_NAME } from '@/lib/locale';
 import { cn } from '@/lib/utils';
@@ -82,7 +83,7 @@ export default function ChatPage() {
       typeof window !== 'undefined'
     ) {
       // Valid id, just not yet the active session → promote to localStorage.
-      localStorage.setItem('chat_conversation_id', conversationId);
+      localStorage.setItem(CHAT_SESSION_STORAGE_KEY, conversationId);
     }
   }, [
     hasEnv,

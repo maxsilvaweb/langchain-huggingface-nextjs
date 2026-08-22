@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
-
-const CHAT_SESSION_STORAGE_KEY = 'chat_conversation_id';
+import type { Id } from '@/lib/convex/dataModel';
+import { CHAT_SESSION_STORAGE_KEY } from '@/lib/globals';
+import { useConvexConversationRepository } from '@/infrastructure/repositories';
 
 type UseChatSessionOptions = {
   /**
@@ -19,17 +17,20 @@ type UseChatSessionOptions = {
 export function useChatSession(options: UseChatSessionOptions = {}) {
   const { autoCreate = true } = options;
 
-  const [conversationId, setConversationId] = useState<Id<'conversations'> | null>(null);
+  const [conversationId, setConversationId] =
+    useState<Id<'conversations'> | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const createConversation = useMutation(api.conversations.create);
+  const conversationRepository = useConvexConversationRepository();
   const initRef = React.useRef(false);
 
-  const startNewSession = React.useCallback(async (): Promise<Id<'conversations'>> => {
-    const newId = await createConversation({});
+  const startNewSession = React.useCallback(async (): Promise<
+    Id<'conversations'>
+  > => {
+    const newId = await conversationRepository.create();
     localStorage.setItem(CHAT_SESSION_STORAGE_KEY, newId);
     setConversationId(newId);
     return newId;
-  }, [createConversation]);
+  }, [conversationRepository]);
 
   const clearSession = React.useCallback(() => {
     localStorage.removeItem(CHAT_SESSION_STORAGE_KEY);
@@ -41,7 +42,9 @@ export function useChatSession(options: UseChatSessionOptions = {}) {
     initRef.current = true;
 
     const initSession = async () => {
-      const storedId = localStorage.getItem(CHAT_SESSION_STORAGE_KEY) as Id<'conversations'> | null;
+      const storedId = localStorage.getItem(
+        CHAT_SESSION_STORAGE_KEY,
+      ) as Id<'conversations'> | null;
 
       if (storedId) {
         setConversationId(storedId);
@@ -60,7 +63,7 @@ export function useChatSession(options: UseChatSessionOptions = {}) {
         const newId = await startNewSession();
         setConversationId(newId);
       } catch (err) {
-        console.error("Failed to create conversation:", err);
+        console.error('Failed to create conversation:', err);
       } finally {
         setIsReady(true);
       }

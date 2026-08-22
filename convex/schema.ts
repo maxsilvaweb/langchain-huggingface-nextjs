@@ -4,6 +4,7 @@ import { v } from 'convex/values';
 export default defineSchema({
   conversations: defineTable({
     title: v.optional(v.string()),
+    messageCount: v.optional(v.float64()),
     // We can add userId here later when auth is added
   }),
 
@@ -11,7 +12,6 @@ export default defineSchema({
     body: v.string(),
     author: v.union(v.literal('user'), v.literal('ai')),
     conversationId: v.optional(v.id('conversations')),
-    sessionId: v.optional(v.string()),
   }).index('by_conversation', ['conversationId']),
 
   documents: defineTable({

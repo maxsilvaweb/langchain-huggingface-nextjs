@@ -6,6 +6,7 @@ export const create = mutationGeneric({
   handler: async (ctx, args) => {
     return await ctx.db.insert('conversations', {
       title: args.title,
+      messageCount: 0,
     });
   },
 });
@@ -20,19 +21,11 @@ export const get = queryGeneric({
 export const list = queryGeneric({
   args: {},
   handler: async (ctx) => {
-    const conversations = await ctx.db
-      .query('conversations')
-      .order('desc')
-      .collect();
-    return await Promise.all(
-      conversations.map(async (conv) => {
-        const count = await ctx.db
-          .query('messages')
-          .withIndex('by_conversation', (q) => q.eq('conversationId', conv._id))
-          .collect();
-        return { ...conv, messageCount: count.length };
-      }),
-    );
+    const conversations = await ctx.db.query('conversations').order('desc').collect();
+    return conversations.map((conv) => ({
+      ...conv,
+      messageCount: conv.messageCount ?? 0,
+    }));
   },
 });
 
@@ -63,6 +56,11 @@ export const remove = mutationGeneric({
       await ctx.db.delete(message._id);
     }
 
+    const conversation = await ctx.db.get(args.conversationId);
+    if (conversation) {
+      await ctx.db.patch(conversation._id, { messageCount: 0 });
+    }
+
     // 2. Delete the conversation itself
     await ctx.db.delete(args.conversationId);
   },
@@ -73,13 +71,14 @@ export const getFirstEmpty = queryGeneric({
   handler: async (ctx) => {
     const conversations = await ctx.db.query('conversations').order('desc').collect();
     for (const conv of conversations) {
-      const messages = await ctx.db
-        .query('messages')
-        .withIndex('by_conversation', (q) => q.eq('conversationId', conv._id))
-        .first();
-      
-      if (!messages) {
-        return conv._id;
+      if ((conv.messageCount ?? 0) === 0) {
+        const firstMessage = await ctx.db
+          .query('messages')
+          .withIndex('by_conversation', (q) => q.eq('conversationId', conv._id))
+          .first();
+        if (!firstMessage) {
+          return conv._id;
+        }
       }
     }
     return null;

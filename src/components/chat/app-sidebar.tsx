@@ -9,10 +9,9 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
 import { useParams, useRouter } from 'next/navigation';
 import { useChatSession } from '@/hooks/use-chat-session';
+import { useConvexConversationRepository } from '@/infrastructure/repositories';
 import { toast } from 'sonner';
 
 import {
@@ -54,9 +53,9 @@ export function AppSidebar({
   deletingId: _deletingId,
   setDeletingId,
 }: AppSidebarProps) {
-  const conversations = useQuery(api.conversations.list);
-  const emptyConversationId = useQuery(api.conversations.getFirstEmpty);
-  const updateTitle = useMutation(api.conversations.updateTitle);
+  const conversationRepository = useConvexConversationRepository();
+  const conversations = conversationRepository.list();
+  const emptyConversationId = conversationRepository.getFirstEmpty();
 
   const params = useParams();
   const router = useRouter();
@@ -99,13 +98,13 @@ export function AppSidebar({
     router.push(`/chat/${id}`);
   };
 
-  const handleRename = async () => {
+  const handleRename = React.useCallback(async () => {
     if (!renamingId || !newTitle.trim()) return;
     try {
-      await updateTitle({
-        conversationId: renamingId as any,
-        title: newTitle.trim(),
-      });
+      await conversationRepository.updateTitle(
+        renamingId as any,
+        newTitle.trim(),
+      );
       setRenamingId(null);
       setNewTitle('');
       toast.success('Conversation renamed');
@@ -113,7 +112,7 @@ export function AppSidebar({
       console.error('Failed to rename conversation:', err);
       toast.error('Failed to rename conversation');
     }
-  };
+  }, [conversationRepository, newTitle, renamingId]);
 
   return (
     <Sidebar className="border-r border-white/10">
@@ -156,63 +155,66 @@ export function AppSidebar({
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {conversations?.map((conv) => (
-                <SidebarMenuItem key={conv._id}>
-                  <SidebarMenuButton
-                    onClick={() => handleSelectConversation(conv._id)}
-                    isActive={conversationId === conv._id}
-                    className={`w-full justify-start gap-3 px-4 py-2 text-sm transition-colors cursor-pointer ${
-                      conversationId === conv._id
-                        ? 'bg-white/10 text-white'
-                        : 'text-white/70 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    <MessageSquare className="h-4 w-4 shrink-0" />
-                    <span className="truncate flex-1">
-                      {conv.title || DEFAULT_CONVERSATION_TITLE}
-                    </span>
-                  </SidebarMenuButton>
+              {conversations?.map((conv) => {
+                const effectiveTitle = conv.title || DEFAULT_CONVERSATION_TITLE;
+                const canDeleteConversation = Boolean(conv.title?.trim());
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <SidebarMenuAction
-                        className="text-white/40 hover:text-white transition-colors cursor-pointer"
-                        aria-label="Conversation options"
-                        title="Conversation options"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                        <span className="sr-only">More</span>
-                      </SidebarMenuAction>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      side="right"
-                      align="start"
-                      className="w-48 bg-zinc-900 border-white/10 text-white"
+                return (
+                  <SidebarMenuItem key={conv._id}>
+                    <SidebarMenuButton
+                      onClick={() => handleSelectConversation(conv._id)}
+                      isActive={conversationId === conv._id}
+                      className={`w-full justify-start gap-3 px-4 py-2 text-sm transition-colors cursor-pointer ${
+                        conversationId === conv._id
+                          ? 'bg-white/10 text-white'
+                          : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      }`}
                     >
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setRenamingId(conv._id);
-                          setNewTitle(conv.title || DEFAULT_CONVERSATION_TITLE);
-                        }}
-                        className="gap-2 cursor-pointer focus:bg-white/10 focus:text-white"
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Rename
-                      </DropdownMenuItem>
-                      {(conv.messageCount ?? 0) > 0 && (
-                        <DropdownMenuItem
-                          onClick={() => setDeletingId?.(conv._id)}
-                          disabled={!setDeletingId}
-                          className="gap-2 cursor-pointer text-red-400 focus:bg-red-400/10 focus:text-red-400"
+                      <MessageSquare className="h-4 w-4 shrink-0" />
+                      <span className="truncate flex-1">{effectiveTitle}</span>
+                    </SidebarMenuButton>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <SidebarMenuAction
+                          className="text-white/40 hover:text-white transition-colors cursor-pointer"
+                          aria-label="Conversation options"
+                          title="Conversation options"
                         >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
+                          <MoreVertical className="h-4 w-4" />
+                          <span className="sr-only">More</span>
+                        </SidebarMenuAction>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        side="right"
+                        align="start"
+                        className="w-48 bg-zinc-900 border-white/10 text-white"
+                      >
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setRenamingId(conv._id);
+                            setNewTitle(effectiveTitle);
+                          }}
+                          className="gap-2 cursor-pointer focus:bg-white/10 focus:text-white"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Rename
                         </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </SidebarMenuItem>
-              ))}
+                        {canDeleteConversation && (
+                          <DropdownMenuItem
+                            onClick={() => setDeletingId?.(conv._id)}
+                            disabled={!setDeletingId}
+                            className="gap-2 cursor-pointer text-red-400 focus:bg-red-400/10 focus:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </SidebarMenuItem>
+                );
+              })}
               {!conversations && (
                 <div className="px-4 py-2 text-sm text-white/30">
                   Loading...
