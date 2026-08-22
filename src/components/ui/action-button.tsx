@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
@@ -14,6 +15,7 @@ interface ActionButtonProps extends Omit<ButtonProps, 'variant'> {
   label: string;
   theme?: ThemeColor;
   className?: string;
+  disabledIcon?: LucideIcon;
 }
 
 const themeStyles: Record<
@@ -62,6 +64,7 @@ export function ActionButton({
   theme = 'green',
   className,
   disabled,
+  disabledIcon: DisabledIcon = Ban,
   ...props
 }: ActionButtonProps) {
   const styles = themeStyles[theme];
@@ -71,22 +74,37 @@ export function ActionButton({
       variant="outline"
       disabled={disabled}
       className={cn(
-        'w-full justify-start gap-3 cursor-pointer shadow-lg pl-1 pr-3',
+        'group w-full justify-start gap-3 cursor-pointer shadow-lg pl-1 pr-3',
         'transition-all duration-200',
         styles.container,
-        disabled && 'opacity-60 cursor-not-allowed pointer-events-none',
+        disabled && 'opacity-60 cursor-not-allowed',
         className,
       )}
+      style={disabled ? { pointerEvents: 'auto' as const } : undefined}
       {...props}
     >
       {Icon && (
         <span
           className={cn(
-            'h-6 w-6 rounded-lg flex items-center justify-center',
+            'relative h-6 w-6 rounded-lg flex items-center justify-center',
             styles.iconBox,
           )}
         >
-          <Icon className={cn('h-3.5 w-3.5', styles.icon)} />
+          <Icon
+            className={cn(
+              'h-3.5 w-3.5 transition-all duration-200',
+              styles.icon,
+              disabled &&
+                'group-hover:scale-0 group-hover:opacity-0 group-hover:-rotate-90',
+            )}
+          />
+          {disabled && (
+            <DisabledIcon
+              className={cn(
+                'absolute inset-0 m-auto h-3.5 w-3.5 scale-0 opacity-0 rotate-90 transition-all duration-200 text-zinc-500 dark:text-zinc-400 group-hover:scale-100 group-hover:opacity-100 group-hover:rotate-0',
+              )}
+            />
+          )}
         </span>
       )}
       <span className="translate-y-[1px] font-medium">{label}</span>

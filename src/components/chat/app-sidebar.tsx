@@ -66,9 +66,18 @@ export function AppSidebar({
 
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [newTitle, setNewTitle] = React.useState('');
+  const [isCreating, setIsCreating] = React.useState(false);
+
+  const isConvexLoading =
+    conversations === undefined || emptyConversationId === undefined;
+
+  const hasEmptyChat = !!emptyConversationId;
+  const emptyChatActive = emptyConversationId === conversationId;
 
   const handleNewChat = async () => {
+    if (isCreating || isConvexLoading || hasEmptyChat) return;
     try {
+      setIsCreating(true);
       if (isMobile) setOpenMobile(false);
       if (emptyConversationId) {
         router.push(`/chat/${emptyConversationId}`);
@@ -80,6 +89,8 @@ export function AppSidebar({
     } catch (err) {
       console.error('Failed to create new chat:', err);
       toast.error('Failed to create new chat');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -112,8 +123,29 @@ export function AppSidebar({
           icon={Plus}
           label={DEFAULT_CONVERSATION_TITLE}
           theme="green"
-          aria-label="Create new chat"
-          title="Create new chat"
+          disabled={isCreating || isConvexLoading || hasEmptyChat}
+          aria-label={
+            isCreating
+              ? 'Creating new chat…'
+              : isConvexLoading
+                ? 'Loading conversations…'
+                : hasEmptyChat
+                  ? emptyChatActive
+                    ? `You already have an empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} open`
+                    : `An empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} already exists — send a message first to unlock a new one`
+                  : 'Create new chat'
+          }
+          title={
+            isCreating
+              ? 'Creating new chat…'
+              : isConvexLoading
+                ? 'Loading conversations…'
+                : hasEmptyChat
+                  ? emptyChatActive
+                    ? `You already have an empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} open`
+                    : `An empty ${DEFAULT_CONVERSATION_TITLE.toLowerCase()} already exists — send a message first to unlock a new one`
+                  : 'Create new chat'
+          }
         />
       </SidebarHeader>
 

@@ -28,19 +28,17 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           isUser ? 'flex-row-reverse' : 'flex-row',
         )}
       >
-        {/* Avatar Placeholder */}
         <div
           className={cn(
-            'flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow-sm',
+            'flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow-sm backdrop-blur-md transition-all duration-200',
             isUser
-              ? 'bg-blue-600 text-blue-50 border-blue-700/20'
-              : 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+              ? 'bg-zinc-800/60 dark:bg-white/10 text-zinc-100 dark:text-white border-zinc-700/60 dark:border-white/10 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]'
+              : 'bg-emerald-100/90 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/40 shadow-[0_1px_0_rgba(255,255,255,0.15)_inset] backdrop-blur-sm',
           )}
         >
           {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
         </div>
 
-        {/* Bubble Content */}
         <div
           className={cn(
             'flex flex-col gap-1',
@@ -49,13 +47,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         >
           <div
             className={cn(
-              'rounded-2xl px-4 py-2.5 shadow-sm ring-1 ring-inset',
+              'rounded-2xl px-4 py-2.5 ring-1 ring-inset backdrop-blur-sm transition-all duration-200',
               isUser
-                ? 'bg-blue-600 text-blue-50 ring-blue-700/10 rounded-tr-none'
-                : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-100 ring-emerald-600/10 rounded-tl-none',
+                ? 'bg-zinc-100/80 dark:bg-white/6 text-zinc-900 dark:text-zinc-100 ring-zinc-200/60 dark:ring-white/10 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_0_rgba(255,255,255,0.4)_inset] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] rounded-tr-md border border-zinc-200/40 dark:border-white/7'
+                : 'bg-emerald-50/90 dark:bg-emerald-950/25 text-emerald-900 dark:text-emerald-100 ring-emerald-600/8 dark:ring-emerald-500/12 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_0_rgba(255,255,255,0.5)_inset] dark:shadow-[0_1px_0_rgba(255,255,255,0.03)_inset] rounded-tl-md border border-emerald-100/60 dark:border-emerald-800/20',
             )}
           >
-            <div className="prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed">
+            <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word leading-relaxed text-[15px]">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {message.body}
               </ReactMarkdown>
