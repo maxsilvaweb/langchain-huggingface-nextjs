@@ -199,14 +199,16 @@ export function AppSidebar({
                         <Pencil className="h-4 w-4" />
                         Rename
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setDeletingId?.(conv._id)}
-                        disabled={!setDeletingId}
-                        className="gap-2 cursor-pointer text-red-400 focus:bg-red-400/10 focus:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
+                      {(conv.messageCount ?? 0) > 0 && (
+                        <DropdownMenuItem
+                          onClick={() => setDeletingId?.(conv._id)}
+                          disabled={!setDeletingId}
+                          className="gap-2 cursor-pointer text-red-400 focus:bg-red-400/10 focus:text-red-400"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </SidebarMenuItem>

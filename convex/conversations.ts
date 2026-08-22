@@ -20,7 +20,19 @@ export const get = queryGeneric({
 export const list = queryGeneric({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query('conversations').order('desc').collect();
+    const conversations = await ctx.db
+      .query('conversations')
+      .order('desc')
+      .collect();
+    return await Promise.all(
+      conversations.map(async (conv) => {
+        const count = await ctx.db
+          .query('messages')
+          .withIndex('by_conversation', (q) => q.eq('conversationId', conv._id))
+          .collect();
+        return { ...conv, messageCount: count.length };
+      }),
+    );
   },
 });
 
