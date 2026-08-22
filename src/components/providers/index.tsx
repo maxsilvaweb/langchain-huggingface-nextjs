@@ -1,8 +1,10 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { ThemeProvider } from './theme-provider';
-import { ConvexClientProvider } from './convex-provider';
+
+import { ConvexClientProvider } from './ConvexProvider';
+import { ThemeProvider } from './ThemeProvider';
+import { ToasterProvider } from './ToasterProvider';
 
 type ProvidersProps = {
   children: ReactNode;
@@ -18,7 +20,10 @@ export function Providers({ children }: ProvidersProps) {
     >
       <ConvexClientProvider>
         {children}
+        <ToasterProvider />
       </ConvexClientProvider>
     </ThemeProvider>
   );
 }
+
+export { ConvexClientProvider, ThemeProvider, ToasterProvider };

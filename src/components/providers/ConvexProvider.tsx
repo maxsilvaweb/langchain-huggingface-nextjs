@@ -9,7 +9,7 @@ type ConvexClientProviderProps = {
 
 export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-  
+
   const client = useMemo(() => {
     if (!convexUrl) {
       return null;
@@ -21,9 +21,5 @@ export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
     return <>{children}</>;
   }
 
-  return (
-    <ConvexProvider client={client}>
-      {children}
-    </ConvexProvider>
-  );
+  return <ConvexProvider client={client}>{children}</ConvexProvider>;
 }
