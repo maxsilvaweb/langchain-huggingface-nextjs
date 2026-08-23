@@ -14,14 +14,14 @@ export default defineSchema({
   conversations: defineTable({
     title: v.optional(v.string()),
     messageCount: v.optional(v.float64()),
-    userId: v.id('users'),
+    userId: v.optional(v.id('users')),
   }).index('by_user', ['userId']),
 
   messages: defineTable({
     body: v.string(),
     author: v.union(v.literal('user'), v.literal('ai')),
     conversationId: v.optional(v.id('conversations')),
-    userId: v.id('users'),
+    userId: v.optional(v.id('users')),
   })
     .index('by_conversation', ['conversationId'])
     .index('by_user_conversation', ['userId', 'conversationId']),
@@ -30,7 +30,7 @@ export default defineSchema({
     text: v.string(),
     metadata: v.any(),
     embedding: v.array(v.float64()),
-    userId: v.id('users'),
+    userId: v.optional(v.id('users')),
   })
     .index('by_user', ['userId'])
     .vectorIndex('by_embedding', {

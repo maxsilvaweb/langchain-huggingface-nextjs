@@ -91,3 +91,10 @@ export async function ensureConversationOwner(
 
   return { userId, conversation };
 }
+
+export function assertOwnedConversationMessage(
+  message: { userId?: Id<'users'> | null },
+  ownerId: Id<'users'>,
+): boolean {
+  return Boolean(message.userId && message.userId === ownerId);
+}

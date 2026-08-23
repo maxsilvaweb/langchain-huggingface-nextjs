@@ -13,3 +13,20 @@
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* Remove Clerk branding/footer UI in auth and account surfaces. */
+.cl-signIn-footer,
+.cl-signUp-footer,
+.cl-userButtonPopoverFooter,
+.cl-footer,
+.cl-badge {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}

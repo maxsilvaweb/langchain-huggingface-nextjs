@@ -27,12 +27,14 @@ export const list = queryGeneric({
     );
     if (!conversation) return [];
 
-    return await ctx.db
+    const rows = await ctx.db
       .query('messages')
       .withIndex('by_user_conversation', (q: any) =>
         q.eq('userId', userId).eq('conversationId', args.conversationId),
       )
       .collect();
+
+    return rows.filter((message) => message.userId === userId);
   },
 });
 
@@ -52,7 +54,8 @@ export const hasAny = queryGeneric({
       )
       .first();
 
-    return firstMessage !== null;
+    if (!firstMessage) return false;
+    return firstMessage.userId === userId;
   },
 });
 
@@ -99,7 +102,9 @@ export const clear = mutationGeneric({
       .collect();
 
     for (const message of messages) {
-      await ctx.db.delete(message._id);
+      if (message.userId === userId) {
+        await ctx.db.delete(message._id);
+      }
     }
 
     await ctx.db.patch(args.conversationId, { messageCount: 0 });
