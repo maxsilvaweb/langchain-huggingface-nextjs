@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 from chat import get_chat_stream, save_interaction
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -7,8 +7,8 @@ from langchain_core.messages import HumanMessage, AIMessage
 async def test_save_interaction():
     # Patch the "convex" alias imported as "convex" in chat.py
     with patch("chat.convex") as mock_db:
-        save_interaction("conv1", "hello", "user")
-        mock_db.save_msg.assert_called_once_with("conv1", "hello", "user")
+        save_interaction("conv1", "hello", "user", "token-123")
+        mock_db.save_msg.assert_called_once_with("conv1", "hello", "user", "token-123")
 
 @pytest.mark.asyncio
 async def test_get_chat_stream():
@@ -28,13 +28,13 @@ async def test_get_chat_stream():
         mock_llm.get_chain.return_value = mock_chain
 
         # 3. Call the function
-        result = get_chat_stream("new msg", "conv1")
+        result = get_chat_stream("new msg", "conv1", "token-123")
 
         # 4. Assertions
         assert result == "stream_iterator"
         
         # Verify dependencies were called
-        mock_db.get_history.assert_called_once_with("conv1")
+        mock_db.get_history.assert_called_once_with("conv1", "token-123")
         mock_llm.get_chain.assert_called_once_with(None, "huggingface")
 
         # Verify history conversion logic in chat.py

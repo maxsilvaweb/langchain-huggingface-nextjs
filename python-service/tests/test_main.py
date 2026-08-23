@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 from main import app
 
 # Create a test client for our FastAPI app
@@ -24,6 +24,7 @@ async def test_chat_endpoint():
         # Perform the POST request to the "/chat" endpoint
         response = client.post(
             "/chat",
+            headers={"Authorization": "Bearer token-123"},
             json={
                 "message": "hi",
                 "conversationId": "test-id"
@@ -36,7 +37,13 @@ async def test_chat_endpoint():
         assert response.content == b"Hello World"
         
         # Verify chat inference was invoked with correct parameters
-        mock_chat.get_chat_stream.assert_called_once_with("hi", "test-id", None, "huggingface")
+        mock_chat.get_chat_stream.assert_called_once_with(
+            "hi",
+            "test-id",
+            "token-123",
+            None,
+            "huggingface",
+        )
         
         # NOTE: save_interaction is intentionally NOT called from the Python backend.
         # Message persistence is owned by the React client (use-chat.ts) to enable

@@ -2,7 +2,7 @@
 # It uses FastAPI to create an API endpoint that handles incoming chat requests.
 
 import chat as chat_service
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -19,17 +19,33 @@ class ChatRequest(BaseModel):
     provider: str = "huggingface" # Optional: The AI provider (default is huggingface)
 
 
+def get_bearer_token(authorization: str | None) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(status_code=401, detail="Invalid Authorization header")
+
+    return token
+
+
 # Define a POST route at "/chat" to receive chat messages
 @app.post("/chat")
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, authorization: str | None = Header(default=None)):
     # Wrap the logic in a try-except block to handle and catch any errors gracefully
     try:
+        convex_token = get_bearer_token(authorization)
         # 1. Get the stream generator from the chat service
         # This function starts the interaction with the AI and prepares to stream the response
         # NOTE: Message persistence is handled by the React client to avoid double inserts
         # and for optimistic UI. Python only performs inference.
         async_gen = chat_service.get_chat_stream(
-            request.message, request.conversationId, request.modelName, request.provider
+            request.message,
+            request.conversationId,
+            convex_token,
+            request.modelName,
+            request.provider,
         )
 
         # 2. Define a helper function to handle the streaming of the AI response
@@ -45,6 +61,8 @@ async def chat(request: ChatRequest):
         return StreamingResponse(stream_generator(), media_type="text/event-stream")
     
     # Error handling block
+    except HTTPException:
+        raise
     except Exception as e:
         # Print the error details to the server logs for debugging
         print(f"DEBUG: Error in chat endpoint: {e}")

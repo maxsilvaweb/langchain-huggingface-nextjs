@@ -39,7 +39,10 @@ export async function POST(req: Request) {
     // Proxy request to Python backend
     const response = await fetch(PYTHON_CHAT_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ message, conversationId, modelName, provider }),
     });
 

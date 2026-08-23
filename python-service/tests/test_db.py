@@ -8,11 +8,12 @@ with patch.dict("os.environ", {"NEXT_PUBLIC_CONVEX_URL": "http://fake-url"}):
 
 @pytest.mark.asyncio
 async def test_save_msg():
-    # Patch the 'client' object that is initialized in db.py
-    with patch("db.client") as mock_client:
-        db.save_msg("conv1", "hello", "user")
+    with patch("db.get_client") as mock_get_client:
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+        db.save_msg("conv1", "hello", "user", "token-123")
         
-        # Verify mutation was called with correct arguments
+        mock_get_client.assert_called_once_with("token-123")
         mock_client.mutation.assert_called_once_with(
             "messages:send",
             {"conversationId": "conv1", "body": "hello", "author": "user"},
@@ -20,14 +21,14 @@ async def test_save_msg():
 
 @pytest.mark.asyncio
 async def test_get_history():
-    # Patch the 'client' object that is initialized in db.py
-    with patch("db.client") as mock_client:
-        # Define return value for the query
+    with patch("db.get_client") as mock_get_client:
+        mock_client = MagicMock()
         mock_client.query.return_value = [{"body": "hi", "author": "user"}]
+        mock_get_client.return_value = mock_client
         
-        result = db.get_history("conv1")
+        result = db.get_history("conv1", "token-123")
         
-        # Verify query was called with correct arguments
+        mock_get_client.assert_called_once_with("token-123")
         mock_client.query.assert_called_once_with(
             "messages:list",
             {"conversationId": "conv1"},

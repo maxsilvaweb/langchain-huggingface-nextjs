@@ -13,11 +13,12 @@ from langchain_core.messages import AIMessage, HumanMessage
 def get_chat_stream(
     message: str,
     conversation_id: str,
+    convex_token: str,
     model_name: str | None = None,
     provider: str = "huggingface",
 ):
     # Fetch existing chat history from the database
-    messages = convex.get_history(conversation_id)
+    messages = convex.get_history(conversation_id, convex_token)
 
     # Convert the raw database messages into a format that LangChain understands
     # (HumanMessage for user messages, AIMessage for AI responses)
@@ -36,5 +37,5 @@ def get_chat_stream(
 
 
 # This function simply saves a new message into the database.
-def save_interaction(conversation_id: str, message: str, author: str):
-    convex.save_msg(conversation_id, message, author)
+def save_interaction(conversation_id: str, message: str, author: str, convex_token: str):
+    convex.save_msg(conversation_id, message, author, convex_token)
