@@ -1,0 +1,15 @@
+.cl-cardBox,
+.cl-userButtonPopoverCard {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.cl-formFieldInput,
+.cl-otpCodeFieldInput {
+  box-shadow: none !important;
+}
+
+.cl-formFieldInput:focus,
+.cl-otpCodeFieldInput:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

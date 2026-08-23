@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '@clerk/nextjs';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChatWindow } from '@/components/chat/chat-window';
@@ -20,14 +21,24 @@ import {
 
 export default function Home() {
   const router = useRouter();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const { conversationId, isReady } = useChatSession();
   const hasEnv = !!process.env.NEXT_PUBLIC_CONVEX_URL;
 
   useEffect(() => {
+    if (authLoaded && !isSignedIn) {
+      router.replace('/sign-in');
+      return;
+    }
+
     if (hasEnv && isReady && conversationId) {
       router.replace(`/chat/${conversationId}`);
     }
-  }, [hasEnv, isReady, conversationId, router]);
+  }, [authLoaded, conversationId, hasEnv, isReady, isSignedIn, router]);
+
+  if (!authLoaded || !isSignedIn) {
+    return null;
+  }
 
   if (!hasEnv) {
     return (

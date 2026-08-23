@@ -1,11 +1,19 @@
+import { auth } from '@clerk/nextjs/server';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { PROVIDER_FALLBACK_MODELS } from '@/lib/ai/models';
 import { DEFAULT_CONVERSATION_TITLE } from '@/lib/locale';
 
 export async function POST(req: Request) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { message } = await req.json();
 
     if (!message) {

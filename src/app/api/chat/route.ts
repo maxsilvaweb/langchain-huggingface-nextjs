@@ -1,23 +1,43 @@
-import { ChatOpenAI } from '@langchain/openai';
-import { ChatAnthropic } from '@langchain/anthropic';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import {
-  ChatPromptTemplate,
-  MessagesPlaceholder,
-} from '@langchain/core/prompts';
-import { StringOutputParser } from '@langchain/core/output_parsers';
-import { AIMessage, HumanMessage } from '@langchain/core/messages';
-import { ConvexHttpClient } from 'convex/browser';
-import { api } from '../../../../convex/_generated/api';
-import { PROVIDER_FALLBACK_MODELS } from '@/lib/ai/models';
+import { auth } from '@clerk/nextjs/server';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/lib/convex/api';
+import { PYTHON_CHAT_API_URL } from '@/lib/globals';
 
 export async function POST(req: Request) {
   try {
     const { message, conversationId, modelName, provider } = await req.json();
+    const { userId, getToken } = await auth();
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const token = await getToken({ template: 'convex' });
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Missing Convex token' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const conversation = await fetchQuery(
+      api.conversations.get,
+      { conversationId },
+      { token },
+    );
+
+    if (!conversation) {
+      return new Response(JSON.stringify({ error: 'Conversation not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // Proxy request to Python backend
-    const response = await fetch('http://127.0.0.1:8000/chat', {
+    const response = await fetch(PYTHON_CHAT_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, conversationId, modelName, provider }),
