@@ -12,6 +12,7 @@ export function useConvexConversationRepository(): IConversationRepository {
   const conversations = useQuery(api.conversations.list);
   const emptyConversationId = useQuery(api.conversations.getFirstEmpty);
   const createMutation = useMutation(api.conversations.create);
+  const ensureSingleEmptyMutation = useMutation(api.conversations.ensureSingleEmpty);
   const updateTitleMutation = useMutation(api.conversations.updateTitle);
   const deleteMutation = useMutation(api.conversations.remove);
 
@@ -24,13 +25,17 @@ export function useConvexConversationRepository(): IConversationRepository {
       return emptyConversationId;
     },
 
+    async ensureSingleEmpty(): Promise<Id<'conversations'> | null> {
+      return await ensureSingleEmptyMutation({});
+    },
+
     async create(title?: string): Promise<Id<'conversations'>> {
       return await createMutation(title ? { title } : {});
     },
 
     async updateTitle(
       conversationId: Id<'conversations'>,
-      title: string
+      title: string,
     ): Promise<void> {
       await updateTitleMutation({ conversationId, title });
     },

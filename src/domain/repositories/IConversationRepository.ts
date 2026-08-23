@@ -10,6 +10,7 @@ export interface Conversation {
 export interface IConversationRepository {
   list(): Conversation[] | undefined;
   getFirstEmpty(): Id<'conversations'> | undefined | null;
+  ensureSingleEmpty(): Promise<Id<'conversations'> | null>;
   updateTitle(conversationId: Id<'conversations'>, title: string): Promise<void>;
   create(title?: string): Promise<Id<'conversations'>>;
   delete(conversationId: Id<'conversations'>): Promise<void>;

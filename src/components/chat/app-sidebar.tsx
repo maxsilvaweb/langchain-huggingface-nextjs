@@ -48,6 +48,7 @@ import {
   getSidebarSearchResultsLabel,
 } from '@/lib/locale';
 import {
+  CHAT_SESSION_STORAGE_KEY,
   NEW_CHAT_SHORTCUT_KEY,
   SIDEBAR_SEARCH_DEBOUNCE_MS,
   SIDEBAR_SEARCH_MAX_VISIBLE,
@@ -56,6 +57,7 @@ import {
 } from '@/lib/globals';
 import { isApplePlatform, isEditableEventTarget } from '@/lib/utils';
 import type { ISearchable } from '@/lib/search';
+import type { Id } from '@/lib/convex/dataModel';
 import type { Conversation } from '@/domain/repositories';
 
 interface AppSidebarProps {
@@ -78,6 +80,12 @@ function toConversationSearchable(
   };
 }
 
+function isPlaceholderConversation(
+  conversation: ConversationListItem,
+): boolean {
+  return !conversation.title?.trim() && (conversation.messageCount ?? 0) === 0;
+}
+
 export function AppSidebar({
   deletingId: _deletingId,
   setDeletingId,
@@ -89,7 +97,8 @@ export function AppSidebar({
   const params = useParams();
   const router = useRouter();
   const { startNewSession } = useChatSession({ autoCreate: false });
-  const conversationId = params?.conversationId as string;
+  const conversationId = params?.conversationId as
+    Id<'conversations'> | undefined;
   const { isMobile, setOpenMobile } = useSidebar();
 
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
@@ -117,10 +126,69 @@ export function AppSidebar({
 
   const hasEmptyChat = !!emptyConversationId;
   const emptyChatActive = emptyConversationId === conversationId;
+  const placeholderConversationIds = React.useMemo(
+    () =>
+      (conversations ?? [])
+        .filter(isPlaceholderConversation)
+        .map((conversation) => conversation._id),
+    [conversations],
+  );
+  const duplicatePlaceholderIds = React.useMemo(
+    () => placeholderConversationIds.slice(1),
+    [placeholderConversationIds],
+  );
+  const repairedDuplicateKeyRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     setApplePlatform(isApplePlatform(navigator));
   }, []);
+
+  React.useEffect(() => {
+    if (isConvexLoading || duplicatePlaceholderIds.length === 0) {
+      repairedDuplicateKeyRef.current = null;
+      return;
+    }
+
+    const repairKey = duplicatePlaceholderIds.join(',');
+    if (repairedDuplicateKeyRef.current === repairKey) return;
+    repairedDuplicateKeyRef.current = repairKey;
+
+    let isActive = true;
+
+    void (async () => {
+      try {
+        const canonicalId = await conversationRepository.ensureSingleEmpty();
+        if (!isActive || !canonicalId) return;
+
+        const storedId = localStorage.getItem(
+          CHAT_SESSION_STORAGE_KEY,
+        ) as Id<'conversations'> | null;
+        if (storedId && duplicatePlaceholderIds.includes(storedId)) {
+          localStorage.setItem(CHAT_SESSION_STORAGE_KEY, canonicalId);
+        }
+
+        if (
+          conversationId &&
+          duplicatePlaceholderIds.includes(conversationId)
+        ) {
+          router.replace(`/chat/${canonicalId}`);
+        }
+      } catch (error) {
+        repairedDuplicateKeyRef.current = null;
+        console.error('Failed to repair duplicate empty conversations:', error);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    conversationId,
+    conversationRepository,
+    duplicatePlaceholderIds,
+    isConvexLoading,
+    router,
+  ]);
 
   const newChatShortcutKeys = React.useMemo(
     () =>
@@ -146,10 +214,11 @@ export function AppSidebar({
         : `Create new chat (${newChatShortcutLabel})`;
 
   const handleNewChat = React.useCallback(async () => {
-    if (isCreating || isConvexLoading || hasEmptyChat) return;
+    if (isCreating || isConvexLoading) return;
     try {
       setIsCreating(true);
       if (isMobile) setOpenMobile(false);
+
       if (emptyConversationId) {
         router.push(`/chat/${emptyConversationId}`);
         return;
@@ -165,7 +234,6 @@ export function AppSidebar({
     }
   }, [
     emptyConversationId,
-    hasEmptyChat,
     isConvexLoading,
     isCreating,
     isMobile,

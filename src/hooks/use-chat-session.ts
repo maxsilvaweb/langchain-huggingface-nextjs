@@ -22,14 +22,31 @@ export function useChatSession(options: UseChatSessionOptions = {}) {
   const [isReady, setIsReady] = useState(false);
   const conversationRepository = useConvexConversationRepository();
   const initRef = React.useRef(false);
+  const pendingSessionRef = React.useRef<Promise<Id<'conversations'>> | null>(
+    null,
+  );
 
   const startNewSession = React.useCallback(async (): Promise<
     Id<'conversations'>
   > => {
-    const newId = await conversationRepository.create();
-    localStorage.setItem(CHAT_SESSION_STORAGE_KEY, newId);
-    setConversationId(newId);
-    return newId;
+    if (pendingSessionRef.current) {
+      return pendingSessionRef.current;
+    }
+
+    const pendingSession = conversationRepository
+      .create()
+      .then((newId) => {
+        localStorage.setItem(CHAT_SESSION_STORAGE_KEY, newId);
+        setConversationId(newId);
+        return newId;
+      })
+      .finally(() => {
+        pendingSessionRef.current = null;
+      });
+
+    pendingSessionRef.current = pendingSession;
+
+    return pendingSession;
   }, [conversationRepository]);
 
   const clearSession = React.useCallback(() => {
