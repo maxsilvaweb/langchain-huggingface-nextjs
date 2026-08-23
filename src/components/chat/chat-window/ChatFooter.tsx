@@ -44,7 +44,7 @@ export function ChatFooter({
             type="button"
             variant="outline"
             size="icon"
-            onClick={onScrollToBottom}
+            onClick={() => onScrollToBottom()}
             aria-label="Scroll to latest message"
             title="Scroll to bottom"
             className={cn(

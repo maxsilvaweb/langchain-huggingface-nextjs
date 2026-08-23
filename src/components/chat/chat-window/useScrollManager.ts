@@ -18,6 +18,12 @@ export interface UseScrollManagerReturn extends ScrollMetrics {
   measureMetrics: () => void;
 }
 
+function normalizeScrollBehavior(
+  behavior?: ScrollBehavior,
+): ScrollBehavior {
+  return behavior === 'auto' || behavior === 'smooth' ? behavior : 'smooth';
+}
+
 /**
  * Custom hook for managing scroll behavior in chat windows.
  * 
@@ -40,11 +46,12 @@ export function useScrollManager(): UseScrollManagerReturn {
     setHasOverflow(overflowAmount > CHAT_SCROLL_OVERFLOW_THRESHOLD_PX);
   }, []);
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+  const scrollToBottom = useCallback((behavior?: ScrollBehavior) => {
     if (!scrollRef.current) return;
+
     scrollRef.current.scrollTo({
       top: scrollRef.current.scrollHeight,
-      behavior,
+      behavior: normalizeScrollBehavior(behavior),
     });
   }, []);
 
