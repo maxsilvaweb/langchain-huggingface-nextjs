@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useChatSession } from '@/hooks/use-chat-session';
+import { useSearchableList } from '@/hooks/use-searchable-list';
 import { useConvexConversationRepository } from '@/infrastructure/repositories';
 import { toast } from 'sonner';
 
@@ -39,25 +40,42 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { AppDialog, AppDialogFooter } from '@/components/ui/app-dialog';
 import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search-input';
 import {
   DEFAULT_CONVERSATION_TITLE,
   SIDEBAR_LABEL_RECENT_CHATS,
+  SIDEBAR_LABEL_NO_SEARCH_RESULTS,
+  getSidebarSearchResultsLabel,
 } from '@/lib/locale';
-import { NEW_CHAT_SHORTCUT_KEY } from '@/lib/globals';
+import {
+  NEW_CHAT_SHORTCUT_KEY,
+  SIDEBAR_SEARCH_DEBOUNCE_MS,
+  SIDEBAR_SEARCH_MAX_VISIBLE,
+  SIDEBAR_SEARCH_MIN_LENGTH,
+  SIDEBAR_SEARCH_PLACEHOLDER,
+} from '@/lib/globals';
+import { isApplePlatform, isEditableEventTarget } from '@/lib/utils';
+import type { ISearchable } from '@/lib/search';
+import type { Conversation } from '@/domain/repositories';
 
 interface AppSidebarProps {
   deletingId?: string | null;
   setDeletingId?: (id: string | null) => void;
 }
 
-function isEditableTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
+type ConversationListItem = Conversation;
 
-  return (
-    target.isContentEditable ||
-    ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
-    Boolean(target.closest('[contenteditable="true"]'))
-  );
+function toConversationSearchable(
+  conversation: ConversationListItem,
+): ISearchable<ConversationListItem> {
+  return {
+    id: conversation._id,
+    item: conversation,
+    getHaystack: () =>
+      [conversation.title ?? DEFAULT_CONVERSATION_TITLE, conversation._id]
+        .join(' ')
+        .trim(),
+  };
 }
 
 export function AppSidebar({
@@ -77,7 +95,22 @@ export function AppSidebar({
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [newTitle, setNewTitle] = React.useState('');
   const [isCreating, setIsCreating] = React.useState(false);
-  const [isApplePlatform, setIsApplePlatform] = React.useState(false);
+  const [applePlatform, setApplePlatform] = React.useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const searchAdapter = React.useCallback(
+    (conversation: ConversationListItem) =>
+      toConversationSearchable(conversation),
+    [],
+  );
+
+  const search = useSearchableList<ConversationListItem>({
+    items: conversations,
+    adapter: searchAdapter,
+    debounceMs: SIDEBAR_SEARCH_DEBOUNCE_MS,
+    maxVisibleResults: SIDEBAR_SEARCH_MAX_VISIBLE,
+    minQueryLength: SIDEBAR_SEARCH_MIN_LENGTH,
+  });
 
   const isConvexLoading =
     conversations === undefined || emptyConversationId === undefined;
@@ -86,17 +119,15 @@ export function AppSidebar({
   const emptyChatActive = emptyConversationId === conversationId;
 
   React.useEffect(() => {
-    setIsApplePlatform(
-      /Macintosh|Mac OS X|iPhone|iPad/.test(navigator.userAgent),
-    );
+    setApplePlatform(isApplePlatform(navigator));
   }, []);
 
   const newChatShortcutKeys = React.useMemo(
     () =>
-      isApplePlatform
+      applePlatform
         ? ['⌘', NEW_CHAT_SHORTCUT_KEY.toUpperCase()]
         : ['Ctrl', NEW_CHAT_SHORTCUT_KEY.toUpperCase()],
-    [isApplePlatform],
+    [applePlatform],
   );
 
   const newChatShortcutLabel = React.useMemo(
@@ -145,15 +176,15 @@ export function AppSidebar({
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const hasPrimaryModifier = isApplePlatform ? event.metaKey : event.ctrlKey;
-      const hasOnlyExpectedModifiers = isApplePlatform
+      const hasPrimaryModifier = applePlatform ? event.metaKey : event.ctrlKey;
+      const hasOnlyExpectedModifiers = applePlatform
         ? !event.ctrlKey && !event.altKey && !event.shiftKey
         : !event.metaKey && !event.altKey && !event.shiftKey;
 
       if (
         event.defaultPrevented ||
         event.isComposing ||
-        isEditableTarget(event.target) ||
+        isEditableEventTarget(event.target) ||
         !hasOnlyExpectedModifiers ||
         !hasPrimaryModifier ||
         event.key.toLowerCase() !== NEW_CHAT_SHORTCUT_KEY
@@ -167,7 +198,7 @@ export function AppSidebar({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNewChat, isApplePlatform]);
+  }, [handleNewChat, applePlatform]);
 
   const handleSelectConversation = (id: string) => {
     if (isMobile) setOpenMobile(false);
@@ -207,12 +238,28 @@ export function AppSidebar({
 
       <SidebarContent>
         <SidebarGroup>
+          <div className="px-4 pb-2 pt-3">
+            <SearchInput
+              value={search.rawQuery}
+              onChange={search.setQuery}
+              onClear={search.reset}
+              inputRef={searchInputRef}
+              placeholder={SIDEBAR_SEARCH_PLACEHOLDER}
+            />
+            {search.isSearching ? (
+              <div className="mt-1 px-1 text-[10px] font-medium uppercase tracking-wider text-white/35">
+                {search.isEmpty
+                  ? SIDEBAR_LABEL_NO_SEARCH_RESULTS
+                  : getSidebarSearchResultsLabel(search.totalMatches ?? 0)}
+              </div>
+            ) : null}
+          </div>
           <SidebarGroupLabel className="text-white/40 px-4 py-2 text-xs font-medium uppercase tracking-wider">
             {SIDEBAR_LABEL_RECENT_CHATS}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {conversations?.map((conv) => {
+              {search.displayItems?.map((conv) => {
                 const effectiveTitle = conv.title || DEFAULT_CONVERSATION_TITLE;
                 const canDeleteConversation = Boolean(conv.title?.trim());
 
@@ -277,7 +324,12 @@ export function AppSidebar({
                   Loading...
                 </div>
               )}
-              {conversations?.length === 0 && (
+              {search.isEmpty && (
+                <div className="px-4 py-2 text-sm text-white/30 italic">
+                  {SIDEBAR_LABEL_NO_SEARCH_RESULTS}
+                </div>
+              )}
+              {!search.isSearching && conversations?.length === 0 && (
                 <div className="px-4 py-2 text-sm text-white/30 italic">
                   No history yet
                 </div>

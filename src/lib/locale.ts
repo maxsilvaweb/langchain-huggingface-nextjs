@@ -5,3 +5,8 @@ export const APP_DESCRIPTION =
 export const DEFAULT_CONVERSATION_TITLE = 'New Chat';
 export const SIDEBAR_LABEL_CONVERSATIONS = 'Conversations';
 export const SIDEBAR_LABEL_RECENT_CHATS = 'Recent Chats';
+export const SIDEBAR_LABEL_NO_SEARCH_RESULTS = 'No matching chats';
+
+export function getSidebarSearchResultsLabel(count: number): string {
+  return `${count} result${count === 1 ? '' : 's'}`;
+}
