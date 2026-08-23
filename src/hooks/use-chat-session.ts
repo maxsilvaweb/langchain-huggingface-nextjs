@@ -1,5 +1,6 @@
 'use client';
 
+import { useConvexAuth } from 'convex/react';
 import React, { useEffect, useState } from 'react';
 import type { Id } from '@/lib/convex/dataModel';
 import { CHAT_SESSION_STORAGE_KEY } from '@/lib/globals';
@@ -20,6 +21,7 @@ export function useChatSession(options: UseChatSessionOptions = {}) {
   const [conversationId, setConversationId] =
     useState<Id<'conversations'> | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const conversationRepository = useConvexConversationRepository();
   const initRef = React.useRef(false);
   const pendingSessionRef = React.useRef<Promise<Id<'conversations'>> | null>(
@@ -55,10 +57,16 @@ export function useChatSession(options: UseChatSessionOptions = {}) {
   }, []);
 
   useEffect(() => {
+    if (isLoading) return;
     if (initRef.current) return;
     initRef.current = true;
 
     const initSession = async () => {
+      if (!isAuthenticated) {
+        setIsReady(true);
+        return;
+      }
+
       const storedId = localStorage.getItem(
         CHAT_SESSION_STORAGE_KEY,
       ) as Id<'conversations'> | null;
@@ -87,7 +95,7 @@ export function useChatSession(options: UseChatSessionOptions = {}) {
     };
 
     void initSession();
-  }, [autoCreate, startNewSession]);
+  }, [autoCreate, isAuthenticated, isLoading, startNewSession]);
 
   return { conversationId, isReady, startNewSession, clearSession };
 }

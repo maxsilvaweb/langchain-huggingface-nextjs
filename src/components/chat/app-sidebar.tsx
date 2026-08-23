@@ -1,12 +1,13 @@
 'use client';
 
+import { SignInButton, UserButton, useAuth, useUser } from '@clerk/nextjs';
 import * as React from 'react';
 import {
   Plus,
   MessageSquare,
-  User,
   MoreVertical,
   Pencil,
+  LogIn,
   Trash2,
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
@@ -42,6 +43,7 @@ import { AppDialog, AppDialogFooter } from '@/components/ui/app-dialog';
 import { Input } from '@/components/ui/input';
 import { SearchInput } from '@/components/ui/search-input';
 import {
+  AUTH_SIGN_IN_LABEL,
   DEFAULT_CONVERSATION_TITLE,
   SIDEBAR_LABEL_RECENT_CHATS,
   SIDEBAR_LABEL_NO_SEARCH_RESULTS,
@@ -120,6 +122,9 @@ export function AppSidebar({
     maxVisibleResults: SIDEBAR_SEARCH_MAX_VISIBLE,
     minQueryLength: SIDEBAR_SEARCH_MIN_LENGTH,
   });
+
+  const { isLoaded: clerkLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
 
   const isConvexLoading =
     conversations === undefined || emptyConversationId === undefined;
@@ -437,17 +442,38 @@ export function AppSidebar({
       <SidebarFooter className="p-4 flex flex-col gap-4">
         <Separator className="bg-white/10" />
         <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-3 text-white/70">
-            <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center border border-white/10">
-              <User className="h-4 w-4" />
+          {!clerkLoaded ? (
+            <div className="h-8 w-48 animate-pulse rounded-md bg-white/5" />
+          ) : isSignedIn ? (
+            <div className="flex items-center gap-3 text-white/70">
+              <UserButton
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox:
+                      'h-8 w-8 border border-white/10 shadow-none',
+                  },
+                }}
+              />
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate text-xs font-medium text-white">
+                  {user?.fullName || user?.username || 'Signed in'}
+                </span>
+                <span className="truncate text-[10px] text-white/45">
+                  {user?.primaryEmailAddress?.emailAddress || 'Clerk account'}
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium text-white">
-                Maximillian
-              </span>
-              <span className="text-[10px]">Free Plan</span>
-            </div>
-          </div>
+          ) : (
+            <SignInButton mode="redirect">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <LogIn className="h-3.5 w-3.5" />
+                {AUTH_SIGN_IN_LABEL}
+              </button>
+            </SignInButton>
+          )}
           <ThemeToggle />
         </div>
       </SidebarFooter>

@@ -1,8 +1,9 @@
 'use client';
 
+import { useAuth } from '@clerk/nextjs';
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { api } from '@/lib/convex/api';
 import { ChatWindow } from '@/components/chat/chat-window';
 import { AppSidebar } from '@/components/chat/app-sidebar';
@@ -30,6 +31,8 @@ import { toast } from 'sonner';
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const conversationId = params.conversationId as Id<'conversations'>;
   const hasEnv = !!process.env.NEXT_PUBLIC_CONVEX_URL;
 
@@ -58,13 +61,21 @@ export default function ChatPage() {
   //   conversation === undefined → Convex is still loading → do NOTHING.
   //   conversation === null    → Convex confirmed row absent → redirect to new.
   //   sessionReady          → useChatSession mount done, startNewSession is safe.
-  const conversation = useQuery(api.conversations.get, { conversationId });
+  const conversation = useQuery(
+    api.conversations.get,
+    authLoading || !isAuthenticated ? 'skip' : { conversationId },
+  );
   const convExists = conversation !== null && conversation !== undefined;
   const convLoading = conversation === undefined;
 
   const redirectInFlight = React.useRef(false);
 
   useEffect(() => {
+    if (authLoaded && !isSignedIn) {
+      router.replace('/sign-in');
+      return;
+    }
+
     if (!hasEnv || !sessionReady) return;
     if (redirectInFlight.current) return;
 
@@ -95,7 +106,13 @@ export default function ChatPage() {
     conversationId,
     startNewSession,
     router,
+    authLoaded,
+    isSignedIn,
   ]);
+
+  if (!authLoaded || !isSignedIn) {
+    return null;
+  }
 
   const handleHeroSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

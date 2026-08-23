@@ -6,6 +6,7 @@ export interface ChatMessage {
   body: string;
   author: 'user' | 'ai';
   conversationId: Id<'conversations'>;
+  userId: Id<'users'>;
 }
 
 export interface NewMessage {

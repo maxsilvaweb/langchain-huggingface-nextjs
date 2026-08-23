@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 
+import { ClerkProvider } from './ClerkProvider';
 import { ConvexClientProvider } from './ConvexProvider';
 import { ThemeProvider } from './ThemeProvider';
 import { ToasterProvider } from './ToasterProvider';
@@ -18,12 +19,14 @@ export function Providers({ children }: ProvidersProps) {
       enableSystem
       disableTransitionOnChange
     >
-      <ConvexClientProvider>
-        {children}
-        <ToasterProvider />
-      </ConvexClientProvider>
+      <ClerkProvider>
+        <ConvexClientProvider>
+          {children}
+          <ToasterProvider />
+        </ConvexClientProvider>
+      </ClerkProvider>
     </ThemeProvider>
   );
 }
 
-export { ConvexClientProvider, ThemeProvider, ToasterProvider };
+export { ClerkProvider, ConvexClientProvider, ThemeProvider, ToasterProvider };

@@ -15,3 +15,8 @@ export const SIDEBAR_SEARCH_DEBOUNCE_MS = 120;
 export const SIDEBAR_SEARCH_MAX_VISIBLE = 150;
 export const SIDEBAR_SEARCH_MIN_LENGTH = 1;
 export const SIDEBAR_SEARCH_PLACEHOLDER = 'Search chats';
+
+export const SIGN_IN_PATH = '/sign-in';
+export const SIGN_UP_PATH = '/sign-up';
+export const POST_SIGN_IN_REDIRECT_PATH = '/';
+export const POST_SIGN_UP_REDIRECT_PATH = '/';

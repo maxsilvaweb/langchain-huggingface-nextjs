@@ -5,6 +5,7 @@ export interface Conversation {
   _creationTime: number;
   title?: string;
   messageCount?: number;
+  userId: Id<'users'>;
 }
 
 export interface IConversationRepository {

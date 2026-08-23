@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery } from 'convex/react';
+import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { api } from '@/lib/convex/api';
 import type { Id } from '@/lib/convex/dataModel';
 import type {
@@ -9,8 +9,13 @@ import type {
 } from '@/domain/repositories';
 
 export function useConvexConversationRepository(): IConversationRepository {
-  const conversations = useQuery(api.conversations.list);
-  const emptyConversationId = useQuery(api.conversations.getFirstEmpty);
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const shouldSkip = isLoading || !isAuthenticated;
+  const conversations = useQuery(api.conversations.list, shouldSkip ? 'skip' : {});
+  const emptyConversationId = useQuery(
+    api.conversations.getFirstEmpty,
+    shouldSkip ? 'skip' : {},
+  );
   const createMutation = useMutation(api.conversations.create);
   const ensureSingleEmptyMutation = useMutation(api.conversations.ensureSingleEmpty);
   const updateTitleMutation = useMutation(api.conversations.updateTitle);
