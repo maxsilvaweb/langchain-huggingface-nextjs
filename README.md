@@ -12,6 +12,17 @@
 
 A polyglot AI application infrastructure combining **Next.js (App Router)**, **Convex** (reactive real-time database), **Python/FastAPI** (AI orchestration via LangChain + Hugging Face), **Tailwind v4**, and **shadcn/ui**.
 
+## Screenshots
+
+### Login
+![Login](public/screenshots/login.jpg)
+
+### Chat with RAG
+![Chat with RAG](public/screenshots/chat.jpg)
+
+### Knowledge Base & RAG Documents
+![Knowledge Base](public/screenshots/knowledge-base-rag.jpg)
+
 ## Architecture Overview
 
 This project uses a decoupled, polyglot backend architecture:

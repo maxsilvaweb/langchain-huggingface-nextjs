@@ -8,7 +8,6 @@ import { api } from '@/lib/convex/api';
 import { ChatWindow } from '@/components/chat/chat-window';
 import { AppSidebar } from '@/components/chat/app-sidebar';
 import { SetupNotice } from '@/components/setup-notice';
-import { ThemeToggle } from '@/components/theme-toggle';
 import {
   SidebarInset,
   SidebarProvider,
@@ -182,7 +181,6 @@ export default function ChatPage() {
               {APP_NAME}
             </span>
           </div>
-          <ThemeToggle />
         </header>
         <main
           className={cn(

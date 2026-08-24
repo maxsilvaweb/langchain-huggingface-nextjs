@@ -4,7 +4,6 @@ import { useAuth } from '@clerk/nextjs';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { SetupNotice } from '@/components/setup-notice';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { APP_DESCRIPTION, APP_NAME } from '@/lib/locale';
 
 export default function Home() {
@@ -44,7 +43,6 @@ export default function Home() {
                 {APP_DESCRIPTION}
               </p>
             </div>
-            <ThemeToggle />
           </div>
           <SetupNotice />
         </div>

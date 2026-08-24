@@ -11,16 +11,15 @@ import { useConvexConversationRepository } from '@/infrastructure/repositories';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { ActionButton } from '@/components/ui/action-button';
 import { Separator } from '@/components/ui/separator';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { AppDialog, AppDialogFooter } from '@/components/ui/app-dialog';
 import { Input } from '@/components/ui/input';
+import { AccountSection } from './AccountSection';
 import {
   CHAT_SESSION_STORAGE_KEY,
   NEW_CHAT_SHORTCUT_KEY,
@@ -31,7 +30,6 @@ import {
 import { DEFAULT_CONVERSATION_TITLE } from '@/lib/locale';
 import { isApplePlatform, isEditableEventTarget } from '@/lib/utils';
 import type { Id } from '@/lib/convex/dataModel';
-import { AccountSection } from './AccountSection';
 import {
   type ConversationListItem,
   isPlaceholderConversation,
@@ -368,11 +366,6 @@ export function AppSidebar({
         </div>
       </AppDialog>
 
-      <SidebarFooter className="p-4 pt-0">
-        <div className="flex items-center justify-start px-2">
-          <ThemeToggle />
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -7,7 +7,6 @@ import { ArrowLeft, ChevronDown, ChevronRight, FileText, Loader2, MessageSquare,
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -198,7 +197,6 @@ export default function DocumentsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             <Button
               onClick={() => setShowForm(!showForm)}
               className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white"
