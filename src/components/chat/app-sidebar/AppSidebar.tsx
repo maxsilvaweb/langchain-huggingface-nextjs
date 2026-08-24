@@ -274,7 +274,7 @@ export function AppSidebar({
 
   return (
     <Sidebar className="border-r border-white/10">
-      <SidebarHeader className="p-4 space-y-4">
+      <SidebarHeader className="p-4 pb-2 space-y-4">
         <div className="px-2">
           <AccountSection
             clerkLoaded={clerkLoaded}
@@ -286,7 +286,19 @@ export function AppSidebar({
           />
         </div>
         <Separator className="bg-white/10" />
-        <ActionButton
+        <div className="space-y-2">
+          <ActionButton
+            onClick={() => {
+              if (isMobile) setOpenMobile(false);
+              router.push('/documents');
+            }}
+            icon={FileText}
+            label="RAG Documents"
+            theme="green"
+            aria-label="Manage RAG knowledge base documents"
+            title="Manage RAG knowledge base documents"
+          />
+          <ActionButton
           onClick={handleNewChat}
           icon={Plus}
           label={DEFAULT_CONVERSATION_TITLE}
@@ -296,11 +308,12 @@ export function AppSidebar({
           aria-label={newChatActionLabel}
           title={newChatActionLabel}
         />
+        </div>
       </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <div className="mx-2 mt-1 overflow-hidden rounded-xl bg-slate-950/60 backdrop-blur-md border border-white/8">
+      <SidebarContent className="pt-0">
+        <SidebarGroup className="pt-0">
+          <div className="mx-2 mt-0 overflow-hidden rounded-xl bg-slate-950/60 backdrop-blur-md border border-white/8">
             <SearchSection
               value={search.rawQuery}
               onChange={search.setQuery}
@@ -323,21 +336,6 @@ export function AppSidebar({
                 setNewTitle(effectiveTitle);
               }}
               onDeleteConversation={(id) => setDeletingId?.(id)}
-            />
-          </div>
-
-          {/* RAG Documents Button */}
-          <div className="mx-2 mt-3">
-            <ActionButton
-              onClick={() => {
-                if (isMobile) setOpenMobile(false);
-                router.push('/documents');
-              }}
-              icon={FileText}
-              label="RAG Documents"
-              theme="green"
-              aria-label="Manage RAG knowledge base documents"
-              title="Manage RAG knowledge base documents"
             />
           </div>
         </SidebarGroup>

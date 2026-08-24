@@ -167,7 +167,7 @@ This project includes a full RAG pipeline that allows the AI to answer questions
 
 ### How RAG Works
 
-1. **Ingest Documents** — Upload text or URLs via the API. Content is chunked (500 chars, 50 overlap) and embedded using `all-MiniLM-L6-v2`.
+1. **Ingest Documents** — Upload text via the API or UI. Content is chunked (500 chars, 50 overlap) and embedded using `all-MiniLM-L6-v2` or `text-embedding-3-small` (384 dims).
 2. **Store Embeddings** — Chunks are stored in Convex's built-in vector database with 384-dimensional embeddings.
 3. **Retrieve Context** — When you ask a question, the system finds the most relevant chunks using vector similarity search.
 4. **Augmented Response** — Retrieved context is injected into the LLM prompt, and the AI cites sources in its response.

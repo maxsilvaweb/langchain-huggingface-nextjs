@@ -28,7 +28,7 @@ export function SearchSection({
   totalMatches,
 }: SearchSectionProps) {
   return (
-    <div className="px-3 pb-2 pt-3">
+    <div className="px-3 pb-2 pt-1">
       <SearchInput
         value={value}
         onChange={onChange}
