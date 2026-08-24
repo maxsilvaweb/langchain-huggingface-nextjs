@@ -185,7 +185,7 @@ export default function DocumentsPage() {
               variant="ghost"
               size="icon"
               onClick={() => router.push('/chat')}
-              className="text-white/60 hover:text-white hover:bg-white/10"
+              className="text-white/60 hover:text-white hover:bg-white/10 cursor-pointer"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -199,7 +199,7 @@ export default function DocumentsPage() {
           <div className="flex items-center gap-2">
             <Button
               onClick={() => setShowForm(!showForm)}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white"
+              className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
             >
               {showForm ? (
                 'Cancel'
@@ -305,7 +305,7 @@ export default function DocumentsPage() {
             <Button
               type="submit"
               disabled={isSubmitting || !text.trim() || !source.trim()}
-              className="w-full gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+              className="w-full gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -338,7 +338,7 @@ export default function DocumentsPage() {
             </p>
             <Button
               onClick={() => setShowForm(true)}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-500"
+              className="gap-2 bg-emerald-600 hover:bg-emerald-500 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               Add Your First Document
