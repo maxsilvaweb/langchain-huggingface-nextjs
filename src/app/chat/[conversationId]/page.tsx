@@ -23,6 +23,7 @@ import { AVAILABLE_MODELS } from '@/lib/ai/models';
 import type { Id } from '@/lib/convex/dataModel';
 import { CHAT_SESSION_STORAGE_KEY } from '@/lib/globals';
 import { ModelSelector } from '@/components/chat/model-selector';
+import { useSelectedModel } from '@/components/providers/ModelProvider';
 import { APP_DESCRIPTION, APP_NAME } from '@/lib/locale';
 import { cn } from '@/lib/utils';
 import { AppDialog, AppDialogFooter } from '@/components/ui/app-dialog';
@@ -42,11 +43,9 @@ export default function ChatPage() {
     isReady: sessionReady,
   } = useChatSession({ autoCreate: false });
 
-  const { messages, sendMessage, isSending } = useChat(conversationId);
+  const { messages, sendMessage, isSending, streamingMessage } = useChat(conversationId);
+  const { selectedModelId: selectedModelId, setSelectedModelId: setSelectedModelId } = useSelectedModel();
   const [heroInput, setHeroInput] = useState('');
-  const [selectedModelId, setSelectedModelId] = useState(
-    AVAILABLE_MODELS[0].id,
-  );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const removeConversation = useMutation(api.conversations.remove);
 
@@ -109,6 +108,15 @@ export default function ChatPage() {
     authLoaded,
     isSignedIn,
   ]);
+
+  // Pre-fill hero input from sessionStorage (e.g. from Documents page)
+  useEffect(() => {
+    const pendingPrompt = sessionStorage.getItem('chat-pending-prompt');
+    if (pendingPrompt && !isSending && messages.length === 0) {
+      setHeroInput(pendingPrompt);
+      sessionStorage.removeItem('chat-pending-prompt');
+    }
+  }, [isSending, messages.length]);
 
   if (!authLoaded || !isSignedIn) {
     return null;
@@ -255,6 +263,8 @@ export default function ChatPage() {
               <ChatWindow
                 conversationId={conversationId}
                 onDeleteChat={() => setDeletingId(conversationId)}
+                externalIsSending={isSending}
+                externalStreamingMessage={streamingMessage}
               />
             )}
           </div>

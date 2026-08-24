@@ -161,6 +161,131 @@ While Next.js is excellent for frontend/API routing, the Python-based FastAPI ba
 2. **Separation of Concerns** — Heavy AI processing is decoupled from the UI, allowing independent scaling.
 3. **Synchronized State** — Both TypeScript and Python are first-class Convex citizens writing to the same reactive DB.
 
+## RAG (Retrieval-Augmented Generation)
+
+This project includes a full RAG pipeline that allows the AI to answer questions using your uploaded documents.
+
+### How RAG Works
+
+1. **Ingest Documents** — Upload text or URLs via the API. Content is chunked (500 chars, 50 overlap) and embedded using `all-MiniLM-L6-v2`.
+2. **Store Embeddings** — Chunks are stored in Convex's built-in vector database with 384-dimensional embeddings.
+3. **Retrieve Context** — When you ask a question, the system finds the most relevant chunks using vector similarity search.
+4. **Augmented Response** — Retrieved context is injected into the LLM prompt, and the AI cites sources in its response.
+
+### RAG API Endpoints
+
+**Ingest text document:**
+```bash
+curl -X POST http://127.0.0.1:8000/documents/ingest \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <convex-token>" \
+  -d '{
+    "text": "Your document content here...",
+    "source": "document_name.txt",
+    "metadata": {"category": "healthcare"}
+  }'
+```
+
+**Ingest from URL:**
+```bash
+curl -X POST http://127.0.0.1:8000/documents/ingest-url \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <convex-token>" \
+  -d '{"url": "https://example.com/article"}'
+```
+
+**List documents:**
+```bash
+curl http://127.0.0.1:8000/documents \
+  -H "Authorization: Bearer <convex-token>"
+```
+
+### Disabling RAG
+
+Pass `useRag: false` in the chat request to skip context retrieval:
+```json
+{"message": "Hello", "conversationId": "...", "useRag": false}
+```
+
+---
+
+## Observability with LangSmith
+
+This project integrates with [LangSmith](https://smith.langchain.com) for LLM observability (free tier available).
+
+### Setup
+
+Add to `python-service/.env`:
+```env
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=lsv2_pt_...
+LANGCHAIN_PROJECT=langchain-rag-chat
+```
+
+### What You Get
+
+- **Full trace visualization** of every LangChain call
+- **Token usage, latency, cost** tracking
+- **Eval datasets** for hallucination detection
+- **Zero code changes** — just env vars
+
+---
+
+## Production Hardening
+
+### Input Guardrails
+
+- **Length limits** — Messages capped at 4,000 characters
+- **Injection detection** — Blocks common prompt injection patterns
+- **Rate limiting** — Configurable via `slowapi`
+
+### Output Guardrails
+
+- **Confidence scoring** — Based on retrieval similarity scores
+- **Source citation** — LLM prompted to cite retrieved sources
+- **Uncertainty acknowledgment** — Model admits when context is insufficient
+
+### Structured Logging
+
+JSON-formatted logs with trace IDs for production observability:
+```json
+{"event": "chat_request", "trace_id": "a1b2c3d4", "conversation_id": "...", "use_rag": true}
+```
+
+Enable JSON logs in production:
+```env
+JSON_LOGS=true
+LOG_LEVEL=INFO
+```
+
+### Health Endpoints
+
+```bash
+# Liveness
+curl http://127.0.0.1:8000/health
+
+# Readiness (checks Convex + RAG pipeline)
+curl http://127.0.0.1:8000/health/ready \
+  -H "Authorization: Bearer <convex-token>"
+```
+
+---
+
+## Evaluation Harness
+
+Run RAG and response quality tests:
+
+```bash
+cd python-service
+pytest evals/ -v
+```
+
+Test categories:
+- `test_rag_retrieval.py` — Chunking, embedding, retrieval accuracy
+- `test_response_grounding.py` — Source citation, hallucination detection
+
+---
+
 ## Development Commands
 
 **Linting & Formatting (Python):**
@@ -176,4 +301,11 @@ cd python-service
 ```bash
 bun lint
 bun typecheck
+```
+
+**Run Evals:**
+
+```bash
+cd python-service
+pytest evals/ -v
 ```

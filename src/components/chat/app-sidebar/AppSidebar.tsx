@@ -2,7 +2,7 @@
 
 import { useAuth, useUser } from '@clerk/nextjs';
 import * as React from 'react';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, FileText } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useChatSession } from '@/hooks/use-chat-session';
@@ -323,6 +323,21 @@ export function AppSidebar({
                 setNewTitle(effectiveTitle);
               }}
               onDeleteConversation={(id) => setDeletingId?.(id)}
+            />
+          </div>
+
+          {/* RAG Documents Button */}
+          <div className="mx-2 mt-3">
+            <ActionButton
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+                router.push('/documents');
+              }}
+              icon={FileText}
+              label="RAG Documents"
+              theme="green"
+              aria-label="Manage RAG knowledge base documents"
+              title="Manage RAG knowledge base documents"
             />
           </div>
         </SidebarGroup>

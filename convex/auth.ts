@@ -98,3 +98,16 @@ export function assertOwnedConversationMessage(
 ): boolean {
   return Boolean(message.userId && message.userId === ownerId);
 }
+
+/**
+ * Get the authenticated user's ID without creating a new user.
+ * Used by queries that need to filter by user ownership.
+ */
+export async function getAuthenticatedUser(ctx: Ctx): Promise<{ userId: Id<'users'> | null }> {
+  try {
+    const userId = await getExistingUserId(ctx);
+    return { userId };
+  } catch {
+    return { userId: null };
+  }
+}
