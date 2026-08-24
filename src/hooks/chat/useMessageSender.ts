@@ -88,6 +88,7 @@ export function useMessageSender(): UseMessageSenderReturn {
         throw err;
       } finally {
         setIsSending(false);
+        setStreamingMessage('');
       }
     },
     [isSending, chatService]

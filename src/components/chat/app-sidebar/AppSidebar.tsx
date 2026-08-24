@@ -300,7 +300,7 @@ export function AppSidebar({
 
       <SidebarContent>
         <SidebarGroup>
-          <div className="mx-2 mt-1 overflow-hidden rounded-xl bg-slate-950/50 backdrop-blur-md border border-white/10">
+          <div className="mx-2 mt-1 overflow-hidden rounded-xl bg-slate-950/60 backdrop-blur-md border border-white/8">
             <SearchSection
               value={search.rawQuery}
               onChange={search.setQuery}

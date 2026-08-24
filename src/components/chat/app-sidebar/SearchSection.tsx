@@ -28,7 +28,7 @@ export function SearchSection({
   totalMatches,
 }: SearchSectionProps) {
   return (
-    <div className="px-4 pb-2 pt-1">
+    <div className="px-3 pb-2 pt-3">
       <SearchInput
         value={value}
         onChange={onChange}
@@ -37,7 +37,7 @@ export function SearchSection({
         placeholder={SIDEBAR_SEARCH_PLACEHOLDER}
       />
       {isSearching ? (
-        <div className="mt-1 px-1 text-[10px] font-medium uppercase tracking-wider text-white/35">
+        <div className="mt-2 px-1 text-[10px] font-medium uppercase tracking-wider text-white/40">
           {isEmpty
             ? SIDEBAR_LABEL_NO_SEARCH_RESULTS
             : getSidebarSearchResultsLabel(totalMatches ?? 0)}
