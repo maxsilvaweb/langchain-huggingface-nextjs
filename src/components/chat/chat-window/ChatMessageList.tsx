@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { Loader2, Bot } from 'lucide-react';
 import { MessageBubble } from '../message-bubble';
 
 interface ChatMessageLike {
@@ -54,10 +54,17 @@ export function ChatMessageList({
         )}
 
         {isSending && !streamingMessage && (
-          <div className="flex justify-start">
-            <div className="bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">AI is thinking...</span>
+          <div className="flex w-full mb-6 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="flex max-w-[85%] gap-3 flex-row">
+              <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow-sm backdrop-blur-md transition-all duration-200 bg-emerald-100/90 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/40 shadow-[0_1px_0_rgba(255,255,255,0.15)_inset]">
+                <Bot className="h-4 w-4" />
+              </div>
+              <div className="flex flex-col gap-1 items-start">
+                <div className="rounded-2xl px-4 py-2.5 ring-1 ring-inset backdrop-blur-sm transition-all duration-200 bg-emerald-50/90 dark:bg-emerald-950/25 text-emerald-900 dark:text-emerald-100 ring-emerald-600/8 dark:ring-emerald-500/12 rounded-tl-md border border-emerald-100/60 dark:border-emerald-800/20 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">AI is thinking...</span>
+                </div>
+              </div>
             </div>
           </div>
         )}

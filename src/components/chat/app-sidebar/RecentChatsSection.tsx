@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -17,7 +16,6 @@ import {
 import {
   DEFAULT_CONVERSATION_TITLE,
   SIDEBAR_LABEL_NO_SEARCH_RESULTS,
-  SIDEBAR_LABEL_RECENT_CHATS,
 } from '@/lib/locale';
 import type { Id } from '@/lib/convex/dataModel';
 import type { Conversation } from '@/domain/repositories';
@@ -48,9 +46,6 @@ export function RecentChatsSection({
 }: RecentChatsSectionProps) {
   return (
     <>
-      <SidebarGroupLabel className="text-white/40 px-4 py-2 text-xs font-medium uppercase tracking-wider">
-        {SIDEBAR_LABEL_RECENT_CHATS}
-      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {displayItems?.map((conversation) => {

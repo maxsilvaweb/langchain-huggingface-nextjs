@@ -300,29 +300,31 @@ export function AppSidebar({
 
       <SidebarContent>
         <SidebarGroup>
-          <SearchSection
-            value={search.rawQuery}
-            onChange={search.setQuery}
-            onClear={search.reset}
-            inputRef={searchInputRef}
-            isSearching={search.isSearching}
-            isEmpty={search.isEmpty}
-            totalMatches={search.totalMatches}
-          />
-          <RecentChatsSection
-            conversations={conversations}
-            displayItems={search.displayItems}
-            isSearching={search.isSearching}
-            isEmpty={search.isEmpty}
-            activeConversationId={conversationId}
-            canDelete={Boolean(setDeletingId)}
-            onSelectConversation={handleSelectConversation}
-            onRenameConversation={(conversation, effectiveTitle) => {
-              setRenamingId(conversation._id);
-              setNewTitle(effectiveTitle);
-            }}
-            onDeleteConversation={(id) => setDeletingId?.(id)}
-          />
+          <div className="mx-2 mt-1 overflow-hidden rounded-xl bg-slate-950/50 backdrop-blur-md border border-white/10">
+            <SearchSection
+              value={search.rawQuery}
+              onChange={search.setQuery}
+              onClear={search.reset}
+              inputRef={searchInputRef}
+              isSearching={search.isSearching}
+              isEmpty={search.isEmpty}
+              totalMatches={search.totalMatches}
+            />
+            <RecentChatsSection
+              conversations={conversations}
+              displayItems={search.displayItems}
+              isSearching={search.isSearching}
+              isEmpty={search.isEmpty}
+              activeConversationId={conversationId}
+              canDelete={Boolean(setDeletingId)}
+              onSelectConversation={handleSelectConversation}
+              onRenameConversation={(conversation, effectiveTitle) => {
+                setRenamingId(conversation._id);
+                setNewTitle(effectiveTitle);
+              }}
+              onDeleteConversation={(id) => setDeletingId?.(id)}
+            />
+          </div>
         </SidebarGroup>
       </SidebarContent>
 
