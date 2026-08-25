@@ -37,10 +37,7 @@ export const clerkAppearance = {
       'text-white/75 hover:bg-white/5 hover:text-white',
     userButtonPopoverActionButton__signOut:
       'text-red-400 hover:bg-red-500/10 hover:text-red-300',
-    signInFooter: 'hidden',
-    signUpFooter: 'hidden',
     userButtonPopoverFooter: 'hidden',
-    footer: 'hidden',
     badge: 'hidden',
   },
 } as const;
