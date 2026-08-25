@@ -420,8 +420,37 @@ chmod +x deploy.sh
 | Cloud Run: `rag-chat-web` | Next.js frontend (0-3 instances, 512Mi, Node.js runtime) |
 | Cloud Run: `rag-chat-api` | Python API (0-3 instances, 2Gi, startup probe on /health) |
 | Secret Manager | Stores all API keys (Clerk, OpenAI, HuggingFace, etc.) |
-| Service Account | IAM identity for Cloud Run to access secrets |
-| IAM policies | Web service is public; API service is internal |
+| Service Account | IAM identity for Cloud Run + CI/CD (run.admin, artifactregistry.writer) |
+| IAM policies | Both services publicly accessible (allUsers invoker) |
+
+## CI/CD: GitHub Actions
+
+A GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically builds and deploys both services to GCP Cloud Run on every push to `main`.
+
+### One-time setup
+
+1. **Create a service account key** (provides GitHub Actions with GCP access):
+
+```bash
+gcloud iam service-accounts keys create key.json \
+  --iam-account rag-chat-sa@rag-chat-app-2026.iam.gserviceaccount.com \
+  --project rag-chat-app-2026
+```
+
+2. **Add the key as a GitHub secret:**
+   - Go to your repo → Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `GCP_SA_KEY`
+   - Value: paste the entire contents of `key.json`
+   - Delete `key.json` locally after adding (never commit it)
+
+3. **Push to main** — the workflow runs automatically:
+
+```
+push to main → build web image → build api image → push to Artifact Registry → deploy to Cloud Run
+```
+
+Both services update with zero downtime. The workflow also supports manual triggering via the Actions tab ("Run workflow").
 
 ### Why GCP Cloud Run
 
