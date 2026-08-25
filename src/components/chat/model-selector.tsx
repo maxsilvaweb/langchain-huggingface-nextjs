@@ -64,12 +64,23 @@ export function ModelSelector({
                     <SelectItem
                       key={model.id}
                       value={model.id}
-                      className="focus:bg-zinc-200 dark:focus:bg-white/10 cursor-pointer rounded-lg mx-0.5 transition-colors"
+                      disabled={model.disabled}
+                      className={cn(
+                        'focus:bg-zinc-200 dark:focus:bg-white/10 cursor-pointer rounded-lg mx-0.5 transition-colors',
+                        model.disabled &&
+                          'opacity-40 cursor-not-allowed pointer-events-none',
+                      )}
+                      title={model.disabled ? model.disabledReason : undefined}
                     >
                       <div className="flex flex-col gap-0.5">
                         <span className="text-sm font-medium">
                           {model.name}
                         </span>
+                        {model.disabled && (
+                          <span className="text-[10px] text-zinc-500">
+                            {model.disabledReason}
+                          </span>
+                        )}
                       </div>
                     </SelectItem>
                   ),

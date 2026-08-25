@@ -1,74 +1,92 @@
 export type Provider = 'huggingface' | 'openai' | 'anthropic' | 'google';
 
-export const AVAILABLE_MODELS = [
+export interface ModelOption {
+  id: string;
+  name: string;
+  provider: Provider;
+  disabled?: boolean;
+  disabledReason?: string;
+}
+
+export const AVAILABLE_MODELS: ModelOption[] = [
   // Hugging Face
   {
     id: 'Qwen/Qwen2.5-72B-Instruct',
     name: 'Qwen 2.5 72B Instruct',
-    provider: 'huggingface' as Provider,
+    provider: 'huggingface',
   },
   {
     id: 'meta-llama/Llama-3.1-8B-Instruct',
     name: 'Llama 3.1 8B Instruct',
-    provider: 'huggingface' as Provider,
+    provider: 'huggingface',
   },
   {
     id: 'deepseek-ai/DeepSeek-V3',
     name: 'DeepSeek V3',
-    provider: 'huggingface' as Provider,
+    provider: 'huggingface',
   },
   {
     id: 'google/gemma-3-12b-it',
     name: 'Gemma 3 12B',
-    provider: 'huggingface' as Provider,
+    provider: 'huggingface',
   },
   {
     id: 'Qwen/Qwen2.5-7B-Instruct',
     name: 'Qwen 2.5 7B Instruct',
-    provider: 'huggingface' as Provider,
+    provider: 'huggingface',
   },
 
   // OpenAI
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' as Provider },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' as Provider },
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
 
-  // Anthropic
+  // Anthropic (disabled - no credits)
   {
     id: 'claude-fable-5',
     name: 'Claude Fable 5',
-    provider: 'anthropic' as Provider,
+    provider: 'anthropic',
+    disabled: true,
+    disabledReason: 'No credits available',
   },
   {
     id: 'claude-opus-5',
     name: 'Claude Opus 5',
-    provider: 'anthropic' as Provider,
+    provider: 'anthropic',
+    disabled: true,
+    disabledReason: 'No credits available',
   },
   {
     id: 'claude-sonnet-5',
     name: 'Claude Sonnet 5',
-    provider: 'anthropic' as Provider,
+    provider: 'anthropic',
+    disabled: true,
+    disabledReason: 'No credits available',
   },
   {
     id: 'claude-3-5-sonnet-latest',
     name: 'Claude 3.5 Sonnet',
-    provider: 'anthropic' as Provider,
+    provider: 'anthropic',
+    disabled: true,
+    disabledReason: 'No credits available',
   },
   {
     id: 'claude-3-haiku-20240307',
     name: 'Claude 3 Haiku',
-    provider: 'anthropic' as Provider,
+    provider: 'anthropic',
+    disabled: true,
+    disabledReason: 'No credits available',
   },
 
   // Google
   {
     id: 'gemini-3.5-flash',
     name: 'Gemini 3.5 Flash',
-    provider: 'google' as Provider,
+    provider: 'google',
   },
   {
     id: 'gemini-3.6-flash',
     name: 'Gemini 3.6 Flash',
-    provider: 'google' as Provider,
+    provider: 'google',
   },
 ];
 
