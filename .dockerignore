@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+python-service/venv
+python-service/__pycache__
+python-service/.env
+.env.local
+*.md
+tsconfig.tsbuildinfo

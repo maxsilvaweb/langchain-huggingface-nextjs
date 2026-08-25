@@ -11,6 +11,16 @@ from typing import Any
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_openai import OpenAIEmbeddings
+
+from constants import (
+    CHUNK_OVERLAP,
+    CHUNK_SEPARATORS,
+    CHUNK_SIZE,
+    EMBEDDING_DIMENSIONS,
+    GOOGLE_EMBEDDING_MODEL,
+    HF_EMBEDDING_MODEL,
+    OPENAI_EMBEDDING_MODEL,
+)
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from interfaces import (
@@ -31,14 +41,14 @@ class RecursiveTextChunker(ITextChunker):
     
     def __init__(
         self,
-        chunk_size: int = 500,
-        chunk_overlap: int = 50,
+        chunk_size: int = CHUNK_SIZE,
+        chunk_overlap: int = CHUNK_OVERLAP,
         separators: list[str] | None = None,
     ):
         self._splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
-            separators=separators or ["\n\n", "\n", ". ", " ", ""],
+            separators=separators or CHUNK_SEPARATORS,
             length_function=len,
         )
     
@@ -56,7 +66,7 @@ class HuggingFaceEmbedder(IEmbedder):
     Single Responsibility: Generate vector embeddings from text.
     """
     
-    DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+    DEFAULT_MODEL = HF_EMBEDDING_MODEL
     
     def __init__(
         self,
@@ -92,8 +102,8 @@ class OpenAIEmbedder(IEmbedder):
     Single Responsibility: Generate vector embeddings from text.
     """
     
-    DEFAULT_MODEL = "text-embedding-3-small"
-    DEFAULT_DIMENSIONS = 384  # Match Convex schema
+    DEFAULT_MODEL = OPENAI_EMBEDDING_MODEL
+    DEFAULT_DIMENSIONS = EMBEDDING_DIMENSIONS  # Match Convex schema
     
     def __init__(
         self,
@@ -129,8 +139,8 @@ class GoogleEmbedder(IEmbedder):
     Single Responsibility: Generate vector embeddings from text.
     """
     
-    DEFAULT_MODEL = "models/text-embedding-004"
-    DEFAULT_DIMENSIONS = 384  # Match Convex schema
+    DEFAULT_MODEL = GOOGLE_EMBEDDING_MODEL
+    DEFAULT_DIMENSIONS = EMBEDDING_DIMENSIONS  # Match Convex schema
     
     def __init__(
         self,

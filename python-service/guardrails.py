@@ -12,13 +12,12 @@ from typing import Optional
 
 from fastapi import HTTPException
 
+from constants import MAX_INPUT_LENGTH, RETRIEVAL_THRESHOLD
+
 
 # ============================================================================
 # INPUT GUARDRAILS
 # ============================================================================
-
-# Maximum allowed input length (characters)
-MAX_INPUT_LENGTH = 4000
 
 # Patterns that might indicate prompt injection attempts
 INJECTION_PATTERNS = [
@@ -99,7 +98,7 @@ def validate_input_or_raise_http(message: str) -> str:
 # ============================================================================
 
 # Minimum similarity score to consider context "relevant"
-RELEVANCE_THRESHOLD = 0.6
+RELEVANCE_THRESHOLD = RETRIEVAL_THRESHOLD
 
 # Phrases that indicate the model is uncertain
 UNCERTAINTY_PHRASES = [

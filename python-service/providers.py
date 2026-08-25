@@ -15,13 +15,19 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 from langchain_openai import ChatOpenAI
 
+from constants import (
+    ANTHROPIC_LLM_MODEL,
+    GOOGLE_LLM_MODEL,
+    HUGGINGFACE_LLM_MODEL,
+    OPENAI_LLM_MODEL,
+)
 from interfaces import ILLMProvider
 
 
 class OpenAIProvider(ILLMProvider):
     """OpenAI LLM provider implementation."""
-    
-    DEFAULT_MODEL = "gpt-4o-mini"
+
+    DEFAULT_MODEL = OPENAI_LLM_MODEL
     
     def __init__(self, api_key: str | None = None):
         self._api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -43,7 +49,7 @@ class OpenAIProvider(ILLMProvider):
 class AnthropicProvider(ILLMProvider):
     """Anthropic Claude LLM provider implementation."""
     
-    DEFAULT_MODEL = "claude-sonnet-4-20250514"
+    DEFAULT_MODEL = ANTHROPIC_LLM_MODEL
     
     def __init__(self, api_key: str | None = None):
         self._api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
@@ -65,7 +71,7 @@ class AnthropicProvider(ILLMProvider):
 class GoogleProvider(ILLMProvider):
     """Google Gemini LLM provider implementation."""
     
-    DEFAULT_MODEL = "gemini-2.0-flash"
+    DEFAULT_MODEL = GOOGLE_LLM_MODEL
     
     def __init__(self, api_key: str | None = None):
         self._api_key = api_key or os.getenv("GOOGLE_API_KEY")
@@ -87,7 +93,7 @@ class GoogleProvider(ILLMProvider):
 class HuggingFaceProvider(ILLMProvider):
     """HuggingFace LLM provider implementation."""
     
-    DEFAULT_MODEL = "HuggingFaceH4/zephyr-7b-beta"
+    DEFAULT_MODEL = HUGGINGFACE_LLM_MODEL
     
     def __init__(self, api_key: str | None = None):
         self._api_key = api_key or os.getenv("HUGGINGFACE_API_KEY")

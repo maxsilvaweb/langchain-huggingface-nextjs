@@ -14,6 +14,8 @@ from typing import Any
 
 import structlog
 
+from constants import SERVICE_NAME, SERVICE_VERSION, LOG_FORMAT, LOG_LEVEL
+
 # Context variable for request trace ID
 trace_id_var: ContextVar[str] = ContextVar("trace_id", default="no-trace")
 
@@ -46,8 +48,8 @@ def add_service_info(
     event_dict: dict[str, Any],
 ) -> dict[str, Any]:
     """Structlog processor to add service metadata."""
-    event_dict["service"] = "langchain-rag-api"
-    event_dict["version"] = "1.0.0"
+    event_dict["service"] = SERVICE_NAME
+    event_dict["version"] = SERVICE_VERSION
     return event_dict
 
 
@@ -111,5 +113,5 @@ def get_logger(name: str | None = None) -> structlog.BoundLogger:
 # Initialize logging on module import
 configure_logging(
     json_logs=os.getenv("JSON_LOGS", "false").lower() == "true",
-    log_level=os.getenv("LOG_LEVEL", "INFO"),
+    log_level=os.getenv("LOG_LEVEL", LOG_LEVEL),
 )

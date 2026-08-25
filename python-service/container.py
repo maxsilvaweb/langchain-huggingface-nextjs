@@ -32,17 +32,24 @@ from services import (
     OpenAIEmbedder,
     RecursiveTextChunker,
 )
+from constants import (
+    CHUNK_SIZE,
+    CHUNK_OVERLAP,
+    HF_EMBEDDING_MODEL,
+    RETRIEVAL_TOP_K,
+    RETRIEVAL_THRESHOLD,
+)
 
 
 @dataclass
 class RAGConfig:
     """Configuration for RAG services."""
-    
-    chunk_size: int = 500
-    chunk_overlap: int = 50
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    retrieval_top_k: int = 5
-    retrieval_threshold: float = 0.6
+
+    chunk_size: int = CHUNK_SIZE
+    chunk_overlap: int = CHUNK_OVERLAP
+    embedding_model: str = HF_EMBEDDING_MODEL
+    retrieval_top_k: int = RETRIEVAL_TOP_K
+    retrieval_threshold: float = RETRIEVAL_THRESHOLD
 
 
 class ServiceContainer:
@@ -160,14 +167,14 @@ def get_container() -> ServiceContainer:
     if _container is None:
         # Load config from environment
         config = RAGConfig(
-            chunk_size=int(os.getenv("RAG_CHUNK_SIZE", "500")),
-            chunk_overlap=int(os.getenv("RAG_CHUNK_OVERLAP", "50")),
+            chunk_size=int(os.getenv("RAG_CHUNK_SIZE", str(CHUNK_SIZE))),
+            chunk_overlap=int(os.getenv("RAG_CHUNK_OVERLAP", str(CHUNK_OVERLAP))),
             embedding_model=os.getenv(
                 "RAG_EMBEDDING_MODEL",
-                "sentence-transformers/all-MiniLM-L6-v2",
+                HF_EMBEDDING_MODEL,
             ),
-            retrieval_top_k=int(os.getenv("RAG_TOP_K", "5")),
-            retrieval_threshold=float(os.getenv("RAG_THRESHOLD", "0.6")),
+            retrieval_top_k=int(os.getenv("RAG_TOP_K", str(RETRIEVAL_TOP_K))),
+            retrieval_threshold=float(os.getenv("RAG_THRESHOLD", str(RETRIEVAL_THRESHOLD))),
         )
         _container = ServiceContainer(config)
     return _container

@@ -15,6 +15,7 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from constants import MAX_INPUT_LENGTH, MAX_INGEST_TEXT_LENGTH, SERVICE_VERSION
 from container import get_container
 from guardrails import validate_input_or_raise_http
 from logging_config import get_logger, set_trace_id
@@ -26,7 +27,7 @@ log = get_logger("main")
 app = FastAPI(
     title="LangChain RAG API",
     description="AI chat API with RAG (Retrieval-Augmented Generation) support",
-    version="1.0.0",
+    version=SERVICE_VERSION,
 )
 
 
@@ -68,7 +69,7 @@ async def logging_middleware(request: Request, call_next):
 
 class ChatRequest(BaseModel):
     """Request body for the chat endpoint."""
-    message: str = Field(..., min_length=1, max_length=4000)
+    message: str = Field(..., min_length=1, max_length=MAX_INPUT_LENGTH)
     conversationId: str
     modelName: Optional[str] = None
     provider: str = "huggingface"
@@ -77,7 +78,7 @@ class ChatRequest(BaseModel):
 
 class IngestTextRequest(BaseModel):
     """Request body for text document ingestion."""
-    text: str = Field(..., min_length=1, max_length=100000)
+    text: str = Field(..., min_length=1, max_length=MAX_INGEST_TEXT_LENGTH)
     source: str = Field(..., description="Source identifier (filename, title, etc.)")
     metadata: Optional[dict[str, Any]] = None
 

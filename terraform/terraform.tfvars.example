@@ -1,0 +1,25 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+project_id   = "your-gcp-project-id"
+region       = "europe-west1"
+
+# Convex
+convex_url       = "https://your-project.convex.cloud"
+convex_site_url  = "https://your-project.convex.site"
+
+# Clerk
+clerk_publishable_key  = "pk_test_..."
+clerk_secret_key       = "sk_test_..."
+clerk_jwt_issuer_domain = "https://your-app.clerk.accounts.dev"
+
+# AI Providers
+huggingface_api_key = "hf_..."
+openai_api_key       = "sk-..."
+anthropic_api_key    = "sk-ant-..."
+google_api_key       = "..."
+
+# LangSmith
+langsmith_api_key = "lsv2_pt_..."
+
+# RAG
+rag_embedding_provider = "openai"

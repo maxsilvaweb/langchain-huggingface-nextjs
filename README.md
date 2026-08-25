@@ -75,6 +75,10 @@ Two environment files are required:
 
 ### Running the Project
 
+You have two options for local development:
+
+#### Option A: Native (faster, hot-reload)
+
 1. **Start Convex + Python AI service (project root):**
 
 ```bash
@@ -92,6 +96,19 @@ bun dev         # or npm run dev
 ```
 
 Then visit `http://localhost:3000`.
+
+#### Option B: Docker Compose (matches production)
+
+```bash
+# Copy env files
+cp .env.example .env.local        # Fill in your keys
+cp python-service/.env.example python-service/.env
+
+# Build and start both services
+docker compose up --build
+```
+
+This runs the same containers that deploy to GCP. The web app is on `http://localhost:3000` and the API on `http://localhost:8000`. Note: you still need Convex running separately (`bunx convex dev`) since it's a managed service.
 
 ## Project Structure
 
@@ -126,11 +143,18 @@ convex/
 └── schema.ts                        Table schemas
 
 python-service/
-├── main.py                          FastAPI service (LangChain + HF router)
-└── services/
-    ├── llm.py                       LLM provider setup
-    ├── chat.py                      Chain definitions
-    └── convex_client.py             Convex client for persistence
+├── main.py                          FastAPI entrypoint (chat, documents, health)
+├── constants.py                     Centralized config (chunk sizes, models, limits)
+├── interfaces.py                    Protocol contracts (SOLID abstractions)
+├── providers.py                     LLM provider factory (OpenAI, Anthropic, Google, HF)
+├── services.py                      RAG implementations (chunker, embedders, vector store)
+├── container.py                     Dependency injection container
+├── guardrails.py                    Input validation + injection detection
+├── logging_config.py                Structlog JSON logging with trace IDs
+├── chat.py                          Chat chain with RAG retrieval
+├── llm.py                           LLM setup with provider routing
+├── db.py                            Convex client for document persistence
+└── evals/                           RAG retrieval + response grounding tests
 ```
 
 ## Key UI/UX Patterns
@@ -320,3 +344,227 @@ bun typecheck
 cd python-service
 pytest evals/ -v
 ```
+
+---
+
+## Docker & Local Containers
+
+Both services are containerised. Run the full stack with Docker Compose:
+
+```bash
+# Copy env vars (fill in your values first)
+cp .env.local .env
+
+# Build and run both services
+docker compose up --build
+```
+
+- **Web** (Next.js): http://localhost:3000
+- **API** (Python FastAPI): http://localhost:8000
+
+### Dockerfiles
+
+- `Dockerfile` — Multi-stage build for Next.js (standalone output, Node.js-based for cross-platform compatibility)
+- `python-service/Dockerfile` — Python 3.13 slim image with uvicorn
+- `docker-compose.yml` — Orchestrates both services with env var injection
+
+---
+
+## Deployment: GCP Cloud Run with Terraform
+
+The infrastructure is defined as code using Terraform. Both services deploy to Google Cloud Run as separate, independently scalable containers.
+
+**Live deployment:**
+- Web: https://rag-chat-web-yqaahhf3aa-ew.a.run.app
+- API: https://rag-chat-api-yqaahhf3aa-ew.a.run.app
+
+### Architecture
+
+```
+User → Cloud Run (Next.js) → Cloud Run (Python API) → Convex (DB + Vector Search)
+                                         ↓
+                                   Secret Manager (API keys)
+                                   LangSmith (Observability)
+```
+
+### Prerequisites
+
+1. [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) installed
+2. [Terraform](https://developer.hashicorp.com/terraform/install) installed
+3. A GCP project with billing enabled
+4. Docker installed
+
+### Deploy
+
+```bash
+# 1. Authenticate with GCP
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+
+# 2. Configure Terraform variables
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+
+# 3. Run the deploy script (builds images, pushes to Artifact Registry, applies Terraform)
+cd ..
+chmod +x deploy.sh
+./deploy.sh
+```
+
+### What Terraform provisions
+
+| Resource | Purpose |
+|----------|---------|
+| Artifact Registry | Stores Docker images |
+| Cloud Run: `rag-chat-web` | Next.js frontend (0-3 instances, 512Mi, Node.js runtime) |
+| Cloud Run: `rag-chat-api` | Python API (0-3 instances, 2Gi, startup probe on /health) |
+| Secret Manager | Stores all API keys (Clerk, OpenAI, HuggingFace, etc.) |
+| Service Account | IAM identity for Cloud Run to access secrets |
+| IAM policies | Web service is public; API service is internal |
+
+### Why GCP Cloud Run
+
+- **Scale to zero** — No traffic, no cost (perfect for a take-home/demo)
+- **Container-native** — Just push Docker images, no server management
+- **Per-service scaling** — The Python API can scale independently from the UI
+- **Secret Manager integration** — API keys never touch the filesystem
+
+---
+
+## RAG/LLM Approach & Decisions
+
+### Chunking Strategy
+
+I chose recursive character text splitting with 500-character chunks and 50-character overlap. Chunking is the process of breaking documents into smaller pieces so vector search can find specific information rather than matching entire documents.
+
+- **500 chars** hits a sweet spot: small enough to be precise (one topic per chunk), large enough to carry meaningful context
+- **50 char overlap** ensures sentences aren't cut in half at chunk boundaries, so context isn't lost between chunks
+- I considered larger chunks (1000+) but they mixed topics and diluted retrieval accuracy
+- I considered smaller chunks (200) but they lost too much surrounding context for the LLM to answer well
+- Recursive splitting (paragraphs > sentences > words) keeps semantic boundaries intact
+
+### Embedding Model
+
+Primary: `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions via HuggingFace Inference API)
+Fallback: `text-embedding-3-small` (OpenAI, 384 dimensions) and `text-embedding-004` (Google, 384 dimensions)
+
+- MiniLM-L6-v2 is fast, free, and produces 384-dim vectors which keeps storage lean
+- I built a `FallbackEmbedder` that automatically tries OpenAI, then HuggingFace, then Google, so RAG keeps working even when one provider's credits are depleted
+- All three providers use 384 dimensions to match the Convex vector index schema, meaning no schema change is needed when switching
+
+### LLM Selection
+
+Multi-provider via factory pattern: HuggingFace, OpenAI, Anthropic, Google.
+
+- The factory pattern (`LLMProviderFactory`) lets users switch models from the UI without backend changes
+- Each provider is a separate class implementing `ILLMProvider`, following Open/Closed Principle
+- Default is HuggingFace (router API) since it's free to start with
+- Users can switch to GPT-4o, Claude, or Gemini from the model selector in the chat UI
+
+### Vector Database
+
+Convex's built-in vector search.
+
+- I chose Convex because its real-time database is perfect for chat (messages update live without polling)
+- The vector search is built into the same database, so no separate vector DB to manage
+- I considered pgvector but wanted to learn something new, and Convex was recommended by Theo (theo.gg)
+- Documents are shared across all authenticated users (one knowledge base, not per-user silos)
+
+### Orchestration Framework
+
+LangChain for the Python AI layer.
+
+- LangChain gives us streaming, prompt templating, and provider abstractions out of the box
+- The `ChatPromptTemplate` handles system prompt + history + user input cleanly
+- LangSmith integration comes for free since we're already in the LangChain ecosystem
+
+### Prompt Engineering & Context Management
+
+The RAG system prompt instructs the AI to prioritize retrieved context, cite sources as `[Source N]`, and admit when it doesn't know something rather than hallucinate.
+
+- Context is injected as a formatted block with source names and relevance scores
+- Chat history is passed via `MessagesPlaceholder` so the LLM has conversation context
+- If RAG retrieval fails (API down, credits depleted), the chat falls back to the base prompt with a clear warning logged
+
+### Guardrails
+
+- Input validation: 4000 character limit on user messages
+- Prompt injection detection: flags common injection patterns
+- Confidence scoring: filters retrieval results below 0.6 similarity threshold
+- RAG failures are non-fatal: the chat continues without context rather than crashing
+
+### Quality Controls
+
+- Eval harness with test categories for retrieval accuracy and response grounding
+- Tests verify chunking behavior, embedding dimensions, and source citation format
+- Response grounding eval cases check for hallucination and irrelevant context usage
+
+### Observability
+
+- **LangSmith**: Full trace of every RAG pipeline step (embedding, retrieval, prompt, LLM response) with timing and token counts
+- **Structlog**: JSON-formatted logs with trace IDs for request correlation
+- **Health endpoints**: `/health` (liveness) and `/health/ready` (readiness checks for embedder, LLM provider, and Convex connectivity)
+
+---
+
+## Key Technical Decisions
+
+1. **Polyglot architecture (TypeScript + Python)** — Next.js handles the UI and auth, Python handles AI orchestration. Each language does what it's best at. The communication is via a simple HTTP API, keeping the boundary clean.
+
+2. **SOLID refactoring with Protocol interfaces** — Split the RAG pipeline into focused classes (Chunker, Embedder, VectorStore, Retriever, Ingester) with Python Protocol interfaces and a dependency injection container. This makes the code testable and provider-agnostic.
+
+3. **Shared knowledge base** — Documents are visible to all authenticated users, not siloed per user. This makes sense for a knowledge base use case where the value is in collective information.
+
+4. **Multi-provider embedding fallback** — If one provider's credits run out, the system automatically tries the next. This prevented an outage when HuggingFace credits depleted during development.
+
+5. **Next.js API routes as proxy** — The frontend never calls the Python backend directly. All requests go through Next.js API routes which handle auth and forwarding. This keeps the Python backend internal.
+
+---
+
+## Engineering Standards
+
+**Followed:**
+- SOLID principles (Single Responsibility, Open/Closed, Interface Segregation, Dependency Inversion)
+- Protocol-based interfaces for dependency injection
+- Factory pattern for LLM provider selection
+- Structured logging with trace IDs
+- Environment-based configuration
+- Type checking (TypeScript `tsc --noEmit` and Python type hints)
+- Git conventional commits
+- Containerisation with Dockerfile + docker-compose
+- Infrastructure as Code with Terraform (GCP Cloud Run)
+
+**Skipped (acknowledged):**
+- **Full unit test suite** — Eval harness covers RAG-specific tests, but the SOLID service classes don't have dedicated unit tests yet.
+- **CI/CD pipeline** — No automated CI; tests and linting run manually.
+- **PDF/document parsing** — Text-only ingestion for MVP. PDF support would require adding a parser like PyMuPDF or unstructured.
+
+---
+
+## How I Used AI Tools
+
+I used AI coding assistants (Factory Droid) as a pair programmer throughout this project. My approach:
+
+- **AI suggested, I decided** — The AI wrote code and proposed solutions, but I reviewed every change, understood what it did, and made the final call on architecture and design decisions
+- **Iterative refinement** — I'd ask for a feature, review the output, then ask for adjustments (e.g., "make the button green", "tighten the spacing", "group chunks by source")
+- **Learning tool** — When I didn't understand a concept (like chunking or polyglot architecture), I asked the AI to explain it before committing to an approach
+- **What I controlled** — Product direction, UX decisions, feature priorities, what to include vs skip for the MVP
+- **What I let AI handle** — Boilerplate code, repetitive patterns, CSS styling tweaks, debugging stack traces
+
+My do's: Review every line before committing, understand the "why" behind decisions, ask for explanations when unsure.
+My don'ts: Don't blindly accept code without understanding it, don't let AI make product decisions, don't skip verification (type checks, manual testing).
+
+---
+
+## What I'd Do Differently With More Time
+
+1. **Add PDF and document parsing** — Currently text-only. I'd add PyMuPDF or `unstructured` for PDF/DOCX support, which is what most real RAG use cases need.
+
+2. **Full test suite** — Unit tests for every SOLID class with mock providers, integration tests for the full RAG pipeline, and automated evals running in CI.
+
+3. **Better retrieval** — Add hybrid search (keyword + vector), re-ranking with a cross-encoder, and query expansion for better recall.
+
+4. **User feedback loop** — Thumbs up/down on AI responses, feeding back into LangSmith for evaluation and prompt improvement.
+
+5. **CI/CD pipeline** — Automated builds, tests, and deploys on push via GitHub Actions to Cloud Run.
