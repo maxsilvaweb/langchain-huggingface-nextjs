@@ -5,6 +5,8 @@ import { Providers } from '@/components/providers';
 import { APP_DESCRIPTION, APP_NAME } from '@/lib/locale';
 import './globals.css';
 
+export const dynamic = 'force-dynamic';
+
 const suisseIntl = localFont({
   src: [
     {
