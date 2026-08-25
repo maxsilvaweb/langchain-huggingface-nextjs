@@ -14,11 +14,8 @@
   box-shadow: none !important;
 }
 
-/* Remove Clerk branding/footer UI in auth and account surfaces. */
-.cl-signIn-footer,
-.cl-signUp-footer,
+/* Remove Clerk branding/badge UI but keep sign-in/sign-up footer links. */
 .cl-userButtonPopoverFooter,
-.cl-footer,
 .cl-badge {
   display: none !important;
   visibility: hidden !important;
@@ -29,4 +26,9 @@
   padding: 0 !important;
   overflow: hidden !important;
   pointer-events: none !important;
+}
+
+/* Hide "Secured by Clerk" branding in footer, keep the sign-up/sign-in action link */
+.cl-footer > *:not(.cl-footerAction) {
+  display: none !important;
 }

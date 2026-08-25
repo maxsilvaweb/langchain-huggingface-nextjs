@@ -27,6 +27,8 @@ export const clerkAppearance = {
     formFieldInput:
       'h-10 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-white/35 shadow-none focus:border-emerald-400/45 focus:ring-0',
     footerActionLink: 'text-emerald-400 hover:text-emerald-300',
+    footerActionText: 'text-white/55 text-sm',
+    footer: 'text-white/55 text-sm',
     identityPreviewText: 'text-white/70',
     formResendCodeLink: 'text-emerald-400 hover:text-emerald-300',
     navbarButton:
