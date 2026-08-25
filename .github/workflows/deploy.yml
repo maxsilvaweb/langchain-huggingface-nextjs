@@ -60,7 +60,7 @@ jobs:
 
       - name: Deploy web to Cloud Run
         run: |
-          gcloud run services update rag-chat-web \
+          gcloud run deploy rag-chat-web \
             --image ${{ env.REGISTRY }}/web:latest \
             --region ${{ env.REGION }} \
             --project ${{ env.PROJECT_ID }} \
@@ -68,10 +68,11 @@ jobs:
 
       - name: Deploy api to Cloud Run
         run: |
-          gcloud run services update rag-chat-api \
+          gcloud run deploy rag-chat-api \
             --image ${{ env.REGISTRY }}/api:latest \
             --region ${{ env.REGION }} \
             --project ${{ env.PROJECT_ID }} \
+            --port 8080 \
             --quiet
 
       - name: Show deployment URLs
