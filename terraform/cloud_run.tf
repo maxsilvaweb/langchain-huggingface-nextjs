@@ -161,7 +161,7 @@ resource "google_cloud_run_v2_service" "api" {
 
       env {
         name  = "LANGSMITH_PROJECT"
-        value = "langchain-rag-chat"
+        value = "langchain-rag-chat-production"
       }
 
       env {
