@@ -46,6 +46,10 @@ jobs:
           tags: ${{ env.REGISTRY }}/web:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_CONVEX_URL=${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+            NEXT_PUBLIC_CONVEX_SITE_URL=${{ secrets.NEXT_PUBLIC_CONVEX_SITE_URL }}
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
 
       - name: Build and push api (Python)
         uses: docker/build-push-action@v6
