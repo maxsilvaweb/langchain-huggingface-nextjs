@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "pdfmake": "^0.3.11",
+    "pdfmake-utils": "^0.5.3"
+  }
+}

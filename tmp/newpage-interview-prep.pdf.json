@@ -1,0 +1,222 @@
+{
+  "pageSize": "A4",
+  "pageMargins": [40, 50, 40, 50],
+  "defaultStyle": { "font": "Roboto", "fontSize": 10 },
+  "styles": {
+    "title": { "fontSize": 24, "bold": true, "color": "#1a1a1a", "margin": [0, 0, 0, 8] },
+    "subtitle": { "fontSize": 12, "color": "#666666", "margin": [0, 0, 0, 20] },
+    "h1": { "fontSize": 16, "bold": true, "color": "#0d9488", "margin": [0, 16, 0, 8] },
+    "h2": { "fontSize": 13, "bold": true, "color": "#1a1a1a", "margin": [0, 12, 0, 6] },
+    "h3": { "fontSize": 11, "bold": true, "color": "#374151", "margin": [0, 8, 0, 4] },
+    "question": { "fontSize": 10, "bold": true, "color": "#1e40af", "margin": [0, 6, 0, 2] },
+    "answer": { "fontSize": 10, "italics": true, "color": "#1a1a1a", "margin": [0, 0, 0, 8] },
+    "label": { "fontSize": 9, "color": "#6b7280" },
+    "keyMessage": { "fontSize": 11, "italics": true, "color": "#047857", "margin": [0, 8, 0, 8] },
+    "tableHeader": { "fontSize": 9, "bold": true, "color": "#ffffff", "fillColor": "#0d9488" }
+  },
+  "header": {
+    "columns": [
+      { "text": "NewPage Interview Prep", "fontSize": 8, "color": "#9ca3af", "margin": [40, 20, 0, 0] },
+      { "text": "Max Silva | 26 Aug 2026", "fontSize": 8, "color": "#9ca3af", "alignment": "right", "margin": [0, 20, 40, 0] }
+    ]
+  },
+  "footer": {
+    "columns": [
+      { "text": "Confidential", "fontSize": 8, "color": "#9ca3af", "margin": [40, 0, 0, 0] },
+      { "text": "Lead Forward Deployed Engineer", "fontSize": 8, "color": "#9ca3af", "alignment": "right", "margin": [0, 0, 40, 0] }
+    ]
+  },
+  "content": [
+    { "text": "NewPage Interview Prep", "style": "title" },
+    { "text": "Technical Review Stage | Lead Forward Deployed Engineer | 2:30pm Today", "style": "subtitle" },
+
+    { "text": "Key Message to Demonstrate", "style": "h1" },
+    { "text": "\"I'm a hands-on engineer who builds production AI systems end-to-end, from RAG pipelines to cloud deployments. I don't start with technology; I understand the business problem, validate quickly with prototypes, make pragmatic trade-offs, communicate clearly to stakeholders, and own the outcome through to production.\"", "style": "keyMessage" },
+
+    { "text": "1. Technical Capability", "style": "h1" },
+
+    { "text": "End-to-end application (frontend + backend + AI/API):", "style": "question" },
+    { "text": "Built a polyglot RAG chat app with Next.js 16 frontend, Python FastAPI backend, Convex real-time database, and multi-provider LLM orchestration via LangChain, deployed to GCP Cloud Run with Terraform IaC.", "style": "answer" },
+
+    { "text": "RAG/GenAI project:", "style": "question" },
+    { "text": "Implemented full RAG pipeline: 500-char recursive chunking, MiniLM-L6-v2 embeddings with multi-provider fallback, Convex vector search, and context injection with source citation and 0.6 similarity threshold.", "style": "answer" },
+
+    { "text": "Why you chose the technology:", "style": "question" },
+    { "text": "Chose polyglot (TypeScript + Python) because LangChain's Python libraries have richer AI orchestration, while Next.js excels at UI/auth; Convex gives real-time sync and built-in vector search in one database.", "style": "answer" },
+
+    { "text": "Challenges & trade-offs:", "style": "question" },
+    { "text": "Trade-off: 500-char chunks hit the sweet spot (smaller lost context, larger diluted retrieval accuracy); challenge was embedding provider credits depleting, solved with FallbackEmbedder that auto-switches between HuggingFace, OpenAI, and Google.", "style": "answer" },
+
+    { "text": "1.1 Definitions", "style": "h2" },
+
+    { "text": "What is Polyglot architecture?", "style": "question" },
+    { "text": "Using multiple programming languages in one system, each chosen for what it does best; in my project, TypeScript handles the UI/auth (Next.js excels here) and Python handles AI orchestration (LangChain's ecosystem is richer in Python).", "style": "answer" },
+
+    { "text": "What does RAG stand for?", "style": "question" },
+    { "text": "Retrieval-Augmented Generation: instead of relying solely on the LLM's training data, we retrieve relevant documents first, then augment the prompt with that context before the model generates a response.", "style": "answer" },
+
+    { "text": "The RAG Cycle:", "style": "h3" },
+    {
+      "table": {
+        "headerRows": 1,
+        "widths": ["auto", "*", "*"],
+        "body": [
+          [
+            { "text": "Phase", "style": "tableHeader" },
+            { "text": "What Happens", "style": "tableHeader" },
+            { "text": "My Implementation", "style": "tableHeader" }
+          ],
+          ["R - Retrieval", "Query knowledge base to find relevant chunks", "Vector similarity search in Convex with 0.6 threshold"],
+          ["A - Augmentation", "Inject retrieved context into the LLM prompt", "Context block with source names and relevance scores"],
+          ["G - Generation", "LLM generates response grounded in that context", "LangChain chain with streaming + source citation prompt"]
+        ]
+      },
+      "layout": "lightHorizontalLines",
+      "margin": [0, 0, 0, 8]
+    },
+
+    { "text": "One-liner for execs:", "style": "question" },
+    { "text": "\"RAG lets the AI answer questions using your company's documents, not just what it learned during training.\"", "style": "answer" },
+
+    { "text": "1.2 Technology Choices", "style": "h2" },
+
+    { "text": "Why Convex?", "style": "h3" },
+    { "text": "What is it?", "style": "question" },
+    { "text": "A reactive real-time database with built-in vector search; data syncs instantly to all connected clients without polling or WebSockets boilerplate.", "style": "answer" },
+
+    { "text": "How does it scale?", "style": "question" },
+    { "text": "Convex is a managed serverless platform that auto-scales; I don't provision servers, it handles concurrency, and vector indexes are built-in so no separate Pinecone/Weaviate to manage.", "style": "answer" },
+
+    { "text": "Multi-platform (mobile + web)?", "style": "question" },
+    { "text": "Both a React Native app and Next.js web app can subscribe to the same Convex queries; when a message is saved, both apps see it instantly without me writing sync logic.", "style": "answer" },
+
+    { "text": "Why not Supabase/Firebase?", "style": "question" },
+    { "text": "Convex has native vector search (384-dim index built-in) and TypeScript-first schema; Supabase would need pgvector extension, Firebase has no vector support, both require more glue code for real-time.", "style": "answer" },
+
+    { "text": "Why Next.js?", "style": "h3" },
+    { "text": "One-liner:", "style": "question" },
+    { "text": "Server Components reduce client bundle size, App Router gives clean file-based routing, and it's the React meta-framework with the best Vercel/edge deployment story.", "style": "answer" },
+
+    { "text": "Why not Remix/Nuxt/SvelteKit?", "style": "question" },
+    { "text": "Next.js has the largest ecosystem (shadcn/ui, Clerk auth, Convex SDK all have first-class Next support); Remix is great but smaller community, Nuxt is Vue (I'm faster in React), SvelteKit is emerging but fewer production case studies.", "style": "answer" },
+
+    { "text": "Why Python over Node (NestJS/Hono)?", "style": "h3" },
+    { "text": "One-liner:", "style": "question" },
+    { "text": "LangChain's Python library has deeper integrations (LangSmith tracing, more provider SDKs, agentic patterns) and the ML/AI ecosystem (PyTorch, HuggingFace Transformers) is Python-native.", "style": "answer" },
+
+    {
+      "table": {
+        "headerRows": 1,
+        "widths": ["*", "*"],
+        "body": [
+          [
+            { "text": "Python Advantage", "style": "tableHeader" },
+            { "text": "Node.js Gap", "style": "tableHeader" }
+          ],
+          ["LangChain Python has LangGraph, eval harnesses, callbacks", "LangChain.js is lighter, fewer features"],
+          ["HuggingFace Transformers runs natively", "Node needs ONNX or API calls"],
+          ["FastAPI matches NestJS DX with less boilerplate", "NestJS is great but AI libs are weaker"],
+          ["Data scientists speak Python", "Hiring AI talent is easier with Python"]
+        ]
+      },
+      "layout": "lightHorizontalLines",
+      "margin": [0, 0, 0, 8]
+    },
+
+    { "text": "If they push back:", "style": "question" },
+    { "text": "\"I could have built this in Node, but I'd have spent more time fighting the ecosystem; Python let me focus on the product, not the plumbing.\"", "style": "answer" },
+
+    { "text": "2. AI-Assisted Development", "style": "h1", "pageBreak": "before" },
+
+    { "text": "How you use Claude Code/Cursor:", "style": "question" },
+    { "text": "I use Factory Droid daily as a pair programmer: AI suggests code, I review every line, understand the \"why,\" test thoroughly, and make final architecture decisions myself.", "style": "answer" },
+
+    { "text": "Review AI-generated code:", "style": "question" },
+    { "text": "I never commit without understanding the code; I run type checks (tsc --noEmit), verify edge cases, and ask the AI to explain unfamiliar patterns before accepting them.", "style": "answer" },
+
+    { "text": "Don't blindly trust AI output:", "style": "question" },
+    { "text": "At Grapple Law, AI suggested an n8n workflow that would have created duplicate Stripe webhooks; I caught it during review and refactored to idempotent handlers, preventing double-billing.", "style": "answer" },
+
+    { "text": "3. Business & Client Focus", "style": "h1" },
+
+    { "text": "Understanding the real business problem:", "style": "question" },
+    { "text": "At BBC News, the stated request was \"rewrite articles with AI,\" but the actual problem was journalists couldn't trust AI output; I built a diff-comparison UI so they could review and selectively accept changes.", "style": "answer" },
+
+    { "text": "Asking discovery questions:", "style": "question" },
+    { "text": "Before designing, I always ask: Who are the users? What does success look like? What are the accuracy, latency, and cost constraints? What happens when the AI gets it wrong?", "style": "answer" },
+
+    { "text": "Translating technical decisions into business impact:", "style": "question" },
+    { "text": "I explain RAG chunking to execs as: \"We're teaching the AI to find needles in haystacks by cutting documents into small, searchable pieces, which means faster, more accurate answers from your knowledge base.\"", "style": "answer" },
+
+    { "text": "4. Communication & Stakeholder Management", "style": "h1" },
+
+    { "text": "Handling a difficult stakeholder:", "style": "question" },
+    { "text": "At Grapple Law, the founder wanted to ship AI features before testing; I presented data showing 15% hallucination rate in legal advice, proposed a one-week eval sprint, and we shipped with confidence scoring that saved client trust.", "style": "answer" },
+
+    { "text": "Explaining a complex technical issue simply:", "style": "question" },
+    { "text": "I describe vector embeddings as: \"We turn words into coordinates on a map, so similar meanings are close together, and the AI can find related documents by measuring distance.\"", "style": "answer" },
+
+    { "text": "Disagreement or conflicting priorities:", "style": "question" },
+    { "text": "At UK DCMS, the PM wanted to migrate everything at once; I proposed incremental migration with feature flags, showed the rollback risk of big-bang deploys, and we shipped safely over 3 sprints.", "style": "answer" },
+
+    { "text": "5. Ownership & Problem Solving", "style": "h1" },
+
+    { "text": "A difficult problem you solved:", "style": "question" },
+    { "text": "Embedding API credits kept depleting mid-conversation; I built a FallbackEmbedder factory that automatically tries OpenAI, then HuggingFace, then Google, so RAG never breaks even when one provider is down.", "style": "answer" },
+
+    { "text": "A project that went wrong and how you recovered:", "style": "question" },
+    { "text": "At Grapple Law, a Docker build took 12+ minutes and caused CI timeouts; I identified the bottleneck (no layer caching), introduced blacksmith.sh caching, and cut builds to under 3 minutes.", "style": "answer" },
+
+    { "text": "A risk you identified early:", "style": "question" },
+    { "text": "In the RAG project, I noticed no input validation; I added 4000-char limits and prompt injection detection before launch, preventing potential abuse.", "style": "answer" },
+
+    { "text": "A mistake/failure and what you learned:", "style": "question" },
+    { "text": "Early in my RAG work, I used 1000-char chunks and retrieval accuracy was poor; I learned that smaller chunks (500) with overlap maintain semantic boundaries and improve precision.", "style": "answer" },
+
+    { "text": "6. Past Experience Examples", "style": "h1", "pageBreak": "before" },
+
+    { "text": "Prototype → Production:", "style": "question" },
+    { "text": "At Goat Interactive, I prototyped 3 Next.js apps in 2 weeks, then productionised with Terraform, Kubernetes, and ArgoCD; shipped to 28 countries with proper CI/CD, observability, and scaling.", "style": "answer" },
+
+    { "text": "Difficult client/stakeholder situation:", "style": "question" },
+    { "text": "At Grapple Law, I co-led a 24/7 AI legal service; when press coverage spiked traffic 10x, I scaled DigitalOcean droplets within hours and communicated status updates directly to the founder every 30 minutes.", "style": "answer" },
+
+    { "text": "Ambiguous business problem:", "style": "question" },
+    { "text": "For my take-home, the brief was \"build something with RAG\"; I framed it as a knowledge base chat, defined success metrics (retrieval accuracy, response grounding), and delivered a production-ready system with LangSmith observability.", "style": "answer" },
+
+    { "text": "7. Technical/Case Question Framework", "style": "h1" },
+
+    { "text": "Questions I'd ask first:", "style": "question" },
+    { "text": "Who are the users? What problem are we solving? What data is available? What are the privacy/security requirements? What accuracy is acceptable? How will we measure success?", "style": "answer" },
+
+    { "text": "Simplest solution first:", "style": "question" },
+    { "text": "I'd propose a working prototype in one week to validate value (e.g., basic RAG with off-the-shelf embeddings), then iterate based on user feedback before productionising.", "style": "answer" },
+
+    { "text": "Quick Recall Card", "style": "h1" },
+    {
+      "table": {
+        "headerRows": 1,
+        "widths": ["auto", "*"],
+        "body": [
+          [
+            { "text": "Question", "style": "tableHeader" },
+            { "text": "1-2 Sentence Answer", "style": "tableHeader" }
+          ],
+          ["What's polyglot?", "Multiple languages in one system, each doing what it's best at"],
+          ["What's RAG?", "Retrieve docs → Augment prompt → Generate grounded response"],
+          ["Why Convex?", "Real-time sync + built-in vector search, no separate DB to manage"],
+          ["Why Next.js?", "Best React ecosystem, Server Components, clean App Router"],
+          ["Why Python?", "LangChain is richer, AI/ML ecosystem is Python-native"]
+        ]
+      },
+      "layout": "lightHorizontalLines",
+      "margin": [0, 0, 0, 16]
+    },
+
+    { "text": "Final Reminder", "style": "h1" },
+    { "text": "Don't just list technologies. For every answer, connect:", "bold": true, "margin": [0, 0, 0, 8] },
+    { "text": "Problem → Technical Decision → Reason/Trade-off → Business Outcome", "style": "keyMessage", "alignment": "center" },
+    { "text": "", "margin": [0, 16, 0, 0] },
+    { "text": "Good luck at 2:30pm, Max! You've got the experience, the project, and now the answers. Own the room.", "alignment": "center", "bold": true, "color": "#0d9488" }
+  ]
+}

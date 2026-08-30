@@ -1,0 +1,774 @@
+================================================================================
+                    NEWPAGE INTERVIEW PREP - MAX SILVA
+          Technical Review Stage | Lead Forward Deployed Engineer
+                          2:30pm - 26 Aug 2026
+================================================================================
+
+
+KEY MESSAGE TO DEMONSTRATE
+================================================================================
+
+"I'm a hands-on engineer who builds production AI systems end-to-end, from RAG 
+pipelines to cloud deployments. I don't start with technology; I understand the 
+business problem, validate quickly with prototypes, make pragmatic trade-offs, 
+communicate clearly to stakeholders, and own the outcome through to production."
+
+REMINDER: Don't just list technologies. For every answer, connect:
+Problem → Technical Decision → Reason/Trade-off → Business Outcome
+
+
+================================================================================
+1. TECHNICAL CAPABILITY
+================================================================================
+
+End-to-end application (frontend + backend + AI/API):
+> Built a polyglot RAG chat app with Next.js 16 frontend, Python FastAPI backend, 
+  Convex real-time database, and multi-provider LLM orchestration via LangChain, 
+  deployed to GCP Cloud Run with Terraform IaC.
+
+RAG/GenAI project:
+> Implemented full RAG pipeline: 500-char recursive chunking, MiniLM-L6-v2 
+  embeddings with multi-provider fallback, Convex vector search, and context 
+  injection with source citation and 0.6 similarity threshold.
+
+Why you chose the technology:
+> Chose polyglot (TypeScript + Python) because LangChain's Python libraries have 
+  richer AI orchestration, while Next.js excels at UI/auth; Convex gives real-time 
+  sync and built-in vector search in one database.
+
+Challenges & trade-offs:
+> Trade-off: 500-char chunks hit the sweet spot (smaller lost context, larger 
+  diluted retrieval accuracy); challenge was embedding provider credits depleting, 
+  solved with FallbackEmbedder that auto-switches between HuggingFace, OpenAI, 
+  and Google.
+
+
+--------------------------------------------------------------------------------
+1.1 RAG DEEP DIVE: CHUNKING
+--------------------------------------------------------------------------------
+
+1.1.1 What is chunking?
+> Breaking documents into smaller pieces so vector search can find specific 
+  information rather than matching entire documents.
+
+1.1.2 Why 500 characters?
+> Sweet spot: small enough to be precise (one topic per chunk), large enough to 
+  carry meaningful context; 1000+ mixed topics, 200 lost too much context.
+
+1.1.3 Why 50-char overlap?
+> Ensures sentences aren't cut in half at chunk boundaries, so context isn't 
+  lost between chunks.
+
+1.1.4 Where is chunking in your app?
+> In services.py, the RecursiveTextChunker class uses LangChain's 
+  RecursiveCharacterTextSplitter with separators: paragraphs → sentences → words.
+
+
+--------------------------------------------------------------------------------
+1.2 RAG DEEP DIVE: EMBEDDINGS & VECTORS
+--------------------------------------------------------------------------------
+
+1.2.1 What are embeddings?
+> Numerical vectors (lists of numbers) that represent the meaning of text, so 
+  similar meanings are close together in vector space.
+
+1.2.2 One-liner for execs:
+> "We turn words into coordinates on a map, so the AI can find related documents 
+  by measuring distance."
+
+1.2.3 What are vectors?
+> An ordered list of numbers that represents a point in multi-dimensional space.
+
+1.2.4 What are 384-dimensional vectors?
+> A list of 384 numbers that together capture the semantic meaning of text, where 
+  each dimension represents a learned feature of language.
+
+1.2.5 Why MiniLM-L6-v2?
+> Fast, free (HuggingFace API), produces 384-dimensional vectors which keeps 
+  storage lean and matches my Convex vector index schema.
+
+1.2.6 Where are embeddings in your app?
+> In services.py, the HuggingFaceEmbedder class (with OpenAIEmbedder and 
+  GoogleEmbedder fallbacks) generates embeddings via embed() and embed_batch().
+
+1.2.7 Why 384 dimensions?
+> All three providers (HuggingFace, OpenAI, Google) output 384 dims so I can 
+  switch providers without changing the Convex vector index schema.
+
+
+--------------------------------------------------------------------------------
+1.3 RAG DEEP DIVE: SIMILARITY THRESHOLD
+--------------------------------------------------------------------------------
+
+1.3.1 What is the 0.6 similarity threshold?
+> Minimum cosine similarity score to include a chunk in the context; anything 
+  below 0.6 is considered too irrelevant and filtered out.
+
+1.3.2 How does it work in your app?
+> Vector search returns chunks ranked by similarity (0.0 to 1.0); I only inject 
+  chunks scoring ≥0.6 into the prompt, preventing noise from diluting the context.
+
+1.3.3 Where is this in your code?
+> In constants.py as RETRIEVAL_THRESHOLD = 0.6, used by the ContextRetriever in 
+  services.py when filtering retrieved documents.
+
+1.3.4 Why 0.6 specifically?
+> Empirically tuned: lower values included irrelevant chunks (noise), higher 
+  values filtered out useful context; 0.6 balanced precision and recall.
+
+
+--------------------------------------------------------------------------------
+1.4 DEFINITIONS
+--------------------------------------------------------------------------------
+
+1.4.1 What is Polyglot architecture?
+> Using multiple programming languages in one system, each chosen for what it 
+  does best; in my project, TypeScript handles the UI/auth (Next.js excels here) 
+  and Python handles AI orchestration (LangChain's ecosystem is richer in Python).
+
+1.4.2 What does RAG stand for?
+> Retrieval-Augmented Generation: instead of relying solely on the LLM's training 
+  data, we retrieve relevant documents first, then augment the prompt with that 
+  context before the model generates a response.
+
+1.4.3 The RAG Cycle (3 phases):
+
+  Phase            | What Happens                              | My Implementation
+  -----------------|-------------------------------------------|------------------------------------------
+  R - Retrieval    | Query knowledge base to find chunks       | Vector similarity search in Convex (0.6 threshold)
+  A - Augmentation | Inject retrieved context into LLM prompt  | Context block with source names + scores
+  G - Generation   | LLM generates grounded response           | LangChain chain with streaming + citations
+
+1.4.4 One-liner for execs:
+> "RAG lets the AI answer questions using your company's documents, not just 
+  what it learned during training."
+
+
+--------------------------------------------------------------------------------
+1.5 TECHNOLOGY CHOICES: CONVEX
+--------------------------------------------------------------------------------
+
+1.5.1 What is Convex?
+> A reactive real-time database with built-in vector search; data syncs instantly 
+  to all connected clients without polling or WebSockets boilerplate.
+
+1.5.2 How does it scale?
+> Convex is a managed serverless platform that auto-scales; I don't provision 
+  servers, it handles concurrency, and vector indexes are built-in so no separate 
+  Pinecone/Weaviate to manage.
+
+1.5.3 Multi-platform (mobile + web)?
+> Both a React Native app and Next.js web app can subscribe to the same Convex 
+  queries; when a message is saved, both apps see it instantly without me writing 
+  sync logic.
+
+1.5.4 Why not Supabase/Firebase?
+> Convex has native vector search (384-dim index built-in) and TypeScript-first 
+  schema; Supabase would need pgvector extension, Firebase has no vector support, 
+  both require more glue code for real-time.
+
+
+--------------------------------------------------------------------------------
+1.6 TECHNOLOGY CHOICES: NEXT.JS
+--------------------------------------------------------------------------------
+
+1.6.1 Why Next.js?
+> Server Components reduce client bundle size, App Router gives clean file-based 
+  routing, and it's the React meta-framework with the best Vercel/edge deployment.
+
+1.6.2 Why not Remix/Nuxt/SvelteKit?
+> Next.js has the largest ecosystem (shadcn/ui, Clerk auth, Convex SDK all have 
+  first-class Next support); Remix is great but smaller community, Nuxt is Vue 
+  (I'm faster in React), SvelteKit is emerging but fewer production case studies.
+
+
+--------------------------------------------------------------------------------
+1.7 TECHNOLOGY CHOICES: PYTHON OVER NODE
+--------------------------------------------------------------------------------
+
+1.7.1 Why Python over Node (NestJS/Hono)?
+> LangChain's Python library has deeper integrations (LangSmith tracing, more 
+  provider SDKs, agentic patterns) and the ML/AI ecosystem (PyTorch, HuggingFace 
+  Transformers) is Python-native.
+
+  Python Advantage                                    | Node.js Gap
+  ----------------------------------------------------|------------------------------------
+  LangChain Python has LangGraph, eval harnesses      | LangChain.js is lighter, fewer features
+  HuggingFace Transformers runs natively              | Node needs ONNX or API calls
+  FastAPI matches NestJS DX with less boilerplate     | NestJS is great but AI libs weaker
+  Data scientists speak Python                        | Hiring AI talent easier with Python
+
+1.7.2 If they push back:
+> "I could have built this in Node, but I'd have spent more time fighting the 
+  ecosystem; Python let me focus on the product, not the plumbing."
+
+
+--------------------------------------------------------------------------------
+1.8 ORCHESTRATION
+--------------------------------------------------------------------------------
+
+1.8.1 What is orchestration?
+> Orchestration is coordinating multiple steps, tools, and LLM calls into a 
+  single workflow, like a conductor directing an orchestra.
+
+1.8.2 In the context of my RAG app:
+> Orchestration means: receive user message → retrieve relevant docs → build 
+  prompt with context → call LLM → stream response → save to database. LangChain 
+  handles this chain of steps so I don't wire it manually.
+
+1.8.3 Concrete example from your project:
+> In chat.py, LangChain orchestrates: (1) fetching chat history from Convex, 
+  (2) retrieving RAG context via the embedder, (3) injecting context into the 
+  prompt template, (4) streaming the response from whichever LLM provider is 
+  selected, all in one chain.astream() call.
+
+1.8.4 Why orchestration matters:
+> Without orchestration, I'd write spaghetti code connecting APIs; with LangChain, 
+  I define the chain declaratively and it handles retries, streaming, callbacks, 
+  and provider switching.
+
+1.8.5 If they ask about agentic orchestration:
+> Agentic orchestration is when the LLM decides which tools to call and in what 
+  order (e.g., "search the web, then summarise, then email the user"). My RAG app 
+  uses a simpler chain (fixed steps), but LangGraph extends this to agentic loops.
+
+
+================================================================================
+2. AI-ASSISTED DEVELOPMENT
+================================================================================
+
+2.1 How you use AI coding tools:
+> I use Factory Droid daily as my primary pair programmer, recommended by Raymond 
+  Fernando (former Apple engineer, 12 years). I combine it with Cursor Pro and 
+  occasionally Codex, switching between different LLMs based on task complexity.
+
+2.2 Why multiple tools and models?
+> Using expensive models like Claude Opus or GPT-4 for simple tasks is overkill 
+  and unnecessarily costly. I match model capability to task complexity: lighter 
+  models for boilerplate/refactoring, heavier models for architecture decisions 
+  or complex debugging.
+
+  Task Type                  | Model Choice               | Why
+  ---------------------------|----------------------------|--------------------------------
+  Boilerplate, simple edits  | Claude Haiku / GPT-4o-mini | Fast, cheap, good enough
+  Complex logic, debugging   | Claude Sonnet / GPT-4o     | Better reasoning, worth the cost
+  Architecture, deep analysis| Claude Opus / o1           | Maximum capability when it matters
+
+
+--------------------------------------------------------------------------------
+2.3 MCP TOOLS: EXA AND REF IN CURSOR
+--------------------------------------------------------------------------------
+
+2.3.1 What are MCPs?
+> MCPs (Model Context Protocol) are tool integrations that give the AI access to 
+  external data sources. I use two MCPs in Cursor: EXA and REF.
+
+2.3.2 What is EXA (Web Search MCP)?
+> EXA gives the AI real-time web search capabilities. Instead of relying on 
+  training data (which can be outdated), the AI can search the web for current 
+  documentation, recent package updates, or best practices.
+
+2.3.3 Why EXA helps:
+> When I'm working with a new library or a recent API change, EXA lets the AI 
+  fetch the latest docs rather than hallucinating based on outdated training. 
+  Example: "What's the new Next.js 15 caching behaviour?" gets real answers.
+
+2.3.4 What is REF (Documentation Search MCP)?
+> REF searches official documentation and reference materials. It's more targeted 
+  than general web search, focusing on authoritative sources.
+
+2.3.5 Why REF helps:
+> When I need accurate API signatures or framework-specific patterns, REF pulls 
+  from official docs rather than Stack Overflow guesses. This reduces 
+  hallucinations and gives me code that actually works with current versions.
+
+2.3.6 How they work together:
+> REF for "how does this API work?" (official docs), EXA for "what's the 
+  community consensus on this pattern?" (broader web). Together, they ground the 
+  AI's suggestions in real, current information.
+
+
+--------------------------------------------------------------------------------
+2.4 CODE REVIEW & VERIFICATION
+--------------------------------------------------------------------------------
+
+2.4.1 Review AI-generated code:
+> I never commit without understanding the code; I run type checks (tsc --noEmit), 
+  verify edge cases, and ask the AI to explain unfamiliar patterns before 
+  accepting them.
+
+2.4.2 Don't blindly trust AI output:
+> At Grapple Law, AI suggested an n8n workflow that would have created duplicate 
+  Stripe webhooks; I caught it during review and refactored to idempotent 
+  handlers, preventing double-billing.
+
+2.4.3 My AI development principles:
+> 1. AI suggests, I decide (I own the architecture)
+> 2. Match model to task complexity (cost-effective)
+> 3. Ground with MCPs (EXA + REF reduce hallucinations)
+> 4. Always verify (type checks, tests, manual review)
+> 5. Understand before committing (no black-box code)
+
+
+================================================================================
+3. BUSINESS & CLIENT FOCUS
+================================================================================
+
+3.1 Understanding the real business problem:
+> At BBC News, the stated request was "rewrite articles with AI," but the actual 
+  problem was journalists couldn't trust AI output; I built a diff-comparison UI 
+  so they could review and selectively accept changes.
+
+3.2 Asking discovery questions:
+> Before designing, I always ask: Who are the users? What does success look like? 
+  What are the accuracy, latency, and cost constraints? What happens when the AI 
+  gets it wrong?
+
+3.3 Translating technical decisions into business impact:
+> I explain RAG chunking to execs as: "We're teaching the AI to find needles in 
+  haystacks by cutting documents into small, searchable pieces, which means 
+  faster, more accurate answers from your knowledge base."
+
+
+================================================================================
+4. COMMUNICATION & STAKEHOLDER MANAGEMENT
+================================================================================
+
+4.1 Handling a difficult stakeholder:
+> At Grapple Law, the founder wanted to ship AI features before testing; I 
+  presented data showing 15% hallucination rate in legal advice, proposed a 
+  one-week eval sprint, and we shipped with confidence scoring that saved 
+  client trust.
+
+4.2 Explaining a complex technical issue simply:
+> I describe vector embeddings as: "We turn words into coordinates on a map, so 
+  similar meanings are close together, and the AI can find related documents by 
+  measuring distance."
+
+4.3 Disagreement or conflicting priorities:
+> At UK DCMS, the PM wanted to migrate everything at once; I proposed incremental 
+  migration with feature flags, showed the rollback risk of big-bang deploys, and 
+  we shipped safely over 3 sprints.
+
+
+================================================================================
+5. OWNERSHIP & PROBLEM SOLVING
+================================================================================
+
+5.1 A difficult problem you solved:
+> Embedding API credits kept depleting mid-conversation; I built a FallbackEmbedder 
+  factory that automatically tries OpenAI, then HuggingFace, then Google, so RAG 
+  never breaks even when one provider is down.
+
+5.2 A project that went wrong and how you recovered:
+> At Grapple Law, a Docker build took 12+ minutes and caused CI timeouts; I 
+  identified the bottleneck (no layer caching), introduced blacksmith.sh caching, 
+  and cut builds to under 3 minutes.
+
+5.3 A risk you identified early:
+> In the RAG project, I noticed no input validation; I added 4000-char limits and 
+  prompt injection detection before launch, preventing potential abuse.
+
+5.4 A mistake/failure and what you learned:
+> Early in my RAG work, I used 1000-char chunks and retrieval accuracy was poor; 
+  I learned that smaller chunks (500) with overlap maintain semantic boundaries 
+  and improve precision.
+
+
+================================================================================
+6. PAST EXPERIENCE EXAMPLES (STAR FORMAT)
+================================================================================
+
+6.1 Prototype → Production:
+> At Goat Interactive, I prototyped 3 Next.js apps in 2 weeks, then productionised 
+  with Terraform, Kubernetes, and ArgoCD; shipped to 28 countries with proper 
+  CI/CD, observability, and scaling.
+
+6.2 Difficult client/stakeholder situation:
+> At Grapple Law, I co-led a 24/7 AI legal service; when press coverage spiked 
+  traffic 10x, I scaled DigitalOcean droplets within hours and communicated 
+  status updates directly to the founder every 30 minutes.
+
+6.3 Ambiguous business problem:
+> For my take-home, the brief was "build something with RAG"; I framed it as a 
+  knowledge base chat, defined success metrics (retrieval accuracy, response 
+  grounding), and delivered a production-ready system with LangSmith observability.
+
+
+================================================================================
+7. TECHNICAL/CASE QUESTION FRAMEWORK
+================================================================================
+
+7.1 Questions I'd ask first:
+> Who are the users? What problem are we solving? What data is available? What 
+  are the privacy/security requirements? What accuracy is acceptable? How will 
+  we measure success?
+
+7.2 Simplest solution first:
+> I'd propose a working prototype in one week to validate value (e.g., basic RAG 
+  with off-the-shelf embeddings), then iterate based on user feedback before 
+  productionising.
+
+
+================================================================================
+8. HALLUCINATIONS IN AI DEVELOPMENT
+================================================================================
+
+8.1.1 What are hallucinations?
+> LLM generates plausible-sounding but factually incorrect information not in its 
+  training data or provided context.
+
+8.1.2 Why are hallucinations dangerous?
+> In legal or journalism, hallucinations cause real harm: wrong advice, 
+  misinformation, eroded trust, and liability.
+
+--------------------------------------------------------------------------------
+8.2 HOW I TACKLED HALLUCINATIONS AT GRAPPLE LAW
+--------------------------------------------------------------------------------
+
+8.2.1 The problem:
+> AI giving employment law advice could hallucinate case references, causing 
+  users to lose tribunals.
+
+8.2.2 Solution 1 - RAG with verified docs:
+> Ingested verified employment law documents so AI only cites from our curated 
+  knowledge base.
+
+8.2.3 Solution 2 - Confidence scoring:
+> Low-confidence answers triggered disclaimer: "Please verify with a solicitor."
+
+8.2.4 Solution 3 - Human-in-the-loop:
+> Users reviewed every AI-drafted ET1 section before submission.
+
+8.2.5 Solution 4 - Uncertainty prompts:
+> System prompt instructed AI to say "I don't have information" rather than guess.
+
+8.2.6 Business outcome:
+> £70k client wins, Mirror/Observer coverage, zero harmful hallucination incidents.
+
+--------------------------------------------------------------------------------
+8.3 HOW I TACKLED HALLUCINATIONS AT BBC NEWS
+--------------------------------------------------------------------------------
+
+8.3.1 The problem:
+> LLM article rewrites could introduce factual errors; 7,000 journalists needed 
+  to trust output.
+
+8.3.2 Solution - Diff-comparison UI:
+> Side-by-side diff view let journalists accept/reject individual AI edits.
+
+8.3.3 Why this worked:
+> Journalists became the guardrail, catching hallucinations before publication.
+
+--------------------------------------------------------------------------------
+8.4 HOW I COMBATED HALLUCINATIONS IN MY TAKE-HOME APP
+--------------------------------------------------------------------------------
+
+8.4.1 RAG grounding:
+> Responses grounded in retrieved chunks; AI prompted to cite sources as 
+  [Source 1], [Source 2].
+
+8.4.2 Similarity threshold filtering:
+> Chunks below 0.6 filtered out, preventing irrelevant context causing tangential 
+  hallucinations.
+
+8.4.3 Confidence scoring:
+> calculate_response_confidence() in guardrails.py triggers disclaimers on low 
+  scores.
+
+8.4.4 Uncertainty acknowledgment:
+> System prompt: "If context doesn't contain the answer, say so clearly."
+
+8.4.5 Where in code:
+> guardrails.py has UNCERTAINTY_PHRASES; llm.py has RAG_SYSTEM_PROMPT with 
+  citation instructions.
+
+
+================================================================================
+9. N8N AT GRAPPLE LAW
+================================================================================
+
+9.1.1 What is n8n?
+> Open-source workflow automation (like Zapier but self-hosted) that connects 
+  APIs and orchestrates multi-step processes visually.
+
+9.1.2 Why n8n at Grapple Law?
+> Non-engineers (legal team) could understand, modify, and debug AI workflows 
+  without touching code.
+
+--------------------------------------------------------------------------------
+9.2 HOW I USED N8N AT GRAPPLE LAW
+--------------------------------------------------------------------------------
+
+9.2.1 AI Assistant orchestration:
+> n8n workflows called OpenAI/Claude APIs and routed users through legal advice 
+  paths based on case type.
+
+9.2.2 Tool-calling workflows:
+> Migrated from OpenAI Assistants to n8n tool-calling; each tool (search case 
+  law, draft letter) was a separate node.
+
+9.2.3 CMS integration:
+> n8n connected Payload CMS to AI; legal team updated prompts in CMS without 
+  code deploys.
+
+9.2.4 Email/SMS automation:
+> Twilio nodes sent verification codes; Mailchimp enrolled marketing-opt-in users.
+
+9.2.5 ET1 form workflow:
+> Multi-step: gather info → AI drafts → user reviews → generate PDF → submit; 
+  each step an n8n node.
+
+9.2.6 Why n8n over code:
+> Legal team could see workflows visually and suggest changes; easier to debug 
+  (see which node failed).
+
+9.2.7 Challenge - idempotency:
+> AI suggested webhook that could fire multiple times; I added deduplication to 
+  prevent duplicate Stripe charges.
+
+
+================================================================================
+10. GUARDRAILS, EVALS & TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+10.1 DEFINITIONS
+--------------------------------------------------------------------------------
+
+10.1.1 What are guardrails?
+> Real-time safety checks on inputs/outputs to prevent misuse, injection attacks, 
+  and low-quality responses reaching users.
+
+10.1.2 What are evals?
+> Tests measuring AI quality: retrieval accuracy, response grounding, 
+  hallucination detection, instruction-following.
+
+10.1.3 Guardrails vs Evals?
+> Guardrails = runtime protection in production; Evals = quality measurement 
+  before deploy in CI.
+
+--------------------------------------------------------------------------------
+10.2 GUARDRAILS IN MY TAKE-HOME APP
+--------------------------------------------------------------------------------
+
+10.2.1 Input validation:
+> validate_input() in guardrails.py checks max 4000 chars and rejects empty input.
+
+10.2.2 Prompt injection detection:
+> Regex patterns detect "ignore previous instructions" attacks; blocked with 
+  generic error.
+
+10.2.3 Where is injection detection?
+> guardrails.py: INJECTION_PATTERNS list, validate_input() raises 
+  InputValidationError on match.
+
+10.2.4 Output confidence scoring:
+> calculate_response_confidence() triggers disclaimers via should_add_disclaimer() 
+  on low scores.
+
+10.2.5 Rate limiting:
+> 20/min for chat, 10/min for ingestion, 30/min for search in guardrails.py.
+
+--------------------------------------------------------------------------------
+10.3 EVALS IN MY TAKE-HOME APP
+--------------------------------------------------------------------------------
+
+10.3.1 Where are evals?
+> python-service/evals/ directory with pytest test files.
+
+10.3.2 test_rag_retrieval.py:
+> Tests chunking logic, 384-dim embeddings, similar texts = similar vectors.
+
+10.3.3 test_response_grounding.py:
+> Tests RAG context injection, source citation, no hallucination on missing info.
+
+10.3.4 How to run evals:
+> cd python-service && pytest evals/ -v
+
+--------------------------------------------------------------------------------
+10.4 GUARDRAILS & EVALS AT GRAPPLE LAW
+--------------------------------------------------------------------------------
+
+10.4.1 Input guardrails:
+> Character limits, profanity filtering, PII detection before sending to LLM APIs.
+
+10.4.2 Output guardrails:
+> Legal disclaimer on all advice; confidence thresholds trigger "consult a 
+  solicitor" warnings.
+
+10.4.3 Human-in-the-loop:
+> Users reviewed and approved high-stakes actions (ET1, settlement letters) 
+  before completion.
+
+10.4.4 Eval process:
+> Weekly evals on anonymized user queries; measured hallucination rate (target <5%).
+
+10.4.5 LangSmith integration:
+> All LLM calls traced; replay conversations and improve prompts from real usage.
+
+
+================================================================================
+11. SECURITY IN AI DEVELOPMENT
+================================================================================
+
+--------------------------------------------------------------------------------
+11.1 HOW I THINK ABOUT SECURITY
+--------------------------------------------------------------------------------
+
+11.1.1 Defense in depth:
+> Multiple layers of protection; if one fails, others catch the threat.
+
+11.1.2 Least privilege:
+> AI only accesses what it needs; no broad database access, no system calls.
+
+11.1.3 Validate everything:
+> Never trust user input; never trust AI output without verification.
+
+--------------------------------------------------------------------------------
+11.2 SECURITY IN MY TAKE-HOME APP
+--------------------------------------------------------------------------------
+
+11.2.1 Input validation:
+> 4000-char limit prevents resource exhaustion; injection patterns blocked.
+
+11.2.2 Prompt injection protection:
+> Regex detects common attacks; system prompt protected from user manipulation.
+
+11.2.3 Auth via Clerk:
+> All API routes require valid Convex token; unauthenticated requests rejected.
+
+11.2.4 Secrets management:
+> API keys in .env (local) and GCP Secret Manager (prod); never in git or logs.
+
+11.2.5 Rate limiting:
+> Prevents abuse and cost explosion; per-endpoint limits in guardrails.py.
+
+11.2.6 No direct LLM access:
+> Frontend calls Next.js API routes which handle auth before forwarding to Python.
+
+--------------------------------------------------------------------------------
+11.3 SECURITY AT GRAPPLE LAW
+--------------------------------------------------------------------------------
+
+11.3.1 PII handling:
+> Masked personal data before sending to LLM APIs; names/addresses/NI numbers 
+  never left raw.
+
+11.3.2 Data residency:
+> EU-based LLM endpoints; user data stored UK/EU only (DigitalOcean London).
+
+11.3.3 Audit logging:
+> All AI interactions logged with timestamps and user IDs for compliance.
+
+11.3.4 Access control:
+> Role-based: users saw only their cases; admins had full access with audit trails.
+
+11.3.5 Incident response:
+> Could trace exact conversation, retrieval context, and prompt to diagnose issues.
+
+11.3.6 24/7 monitoring:
+> Alerts for unusual usage, error spikes, cost anomalies; 30-minute response time.
+
+
+================================================================================
+QUICK RECALL CARD
+================================================================================
+
+  Question                   | 1-2 Sentence Answer
+  ---------------------------|------------------------------------------------------------
+  What's polyglot?           | Multiple languages in one system, each doing what it's best at
+  What's RAG?                | Retrieve docs → Augment prompt → Generate grounded response
+  What's orchestration?      | Coordinating multiple steps/tools/LLM calls into one workflow
+  What are vectors?          | An ordered list of numbers representing a point in space
+  What are 384-dim vectors?  | 384 numbers capturing semantic meaning, each dimension a learned feature
+  What are embeddings?       | Vectors that represent text meaning, similar = close together
+  Why 500-char chunks?       | Sweet spot: precise enough, contextual enough; 1000 mixed, 200 lost context
+  Why 0.6 threshold?         | Filters irrelevant chunks; lower = noise, higher = lost context
+  Why Convex?                | Real-time sync + built-in vector search, no separate DB to manage
+  Why Next.js?               | Best React ecosystem, Server Components, clean App Router
+  Why Python?                | LangChain is richer, AI/ML ecosystem is Python-native
+  Chain vs Agent?            | Chain = fixed steps; Agent = LLM decides which tools to call
+  What's EXA MCP?            | Real-time web search so AI uses current docs, not stale training
+  What's REF MCP?            | Official documentation search for accurate API signatures
+  What are hallucinations?   | LLM generates plausible but incorrect info not in training/context
+  How to combat hallucinations? | RAG grounding, confidence scoring, human-in-the-loop, uncertainty prompts
+  What is n8n?               | Open-source workflow automation; visual orchestration for non-engineers
+  What are guardrails?       | Real-time safety checks on inputs/outputs in production
+  What are evals?            | Tests measuring AI quality (retrieval, grounding, hallucination) in CI
+  Guardrails vs Evals?       | Guardrails = runtime protection; Evals = pre-deploy quality measurement
+  Prompt injection?          | User tries to override system prompt; blocked by regex detection
+
+
+================================================================================
+12. QUESTIONS FOR THE INTERVIEWER
+================================================================================
+
+--------------------------------------------------------------------------------
+12.1 HOW TO ANSWER "WHY NEWPAGE?"
+--------------------------------------------------------------------------------
+
+> "Three reasons: First, the Forward Deployed Engineer role combines consulting, 
+  product ownership, and engineering, which matches exactly how I work at my best. 
+  I don't want to just build what I'm told; I want to understand the problem, 
+  decide what's worth building, and own the outcome. Second, digital health is 
+  where AI can make a real difference, not just optimise ads, but help people 
+  live healthier lives. Third, from the JD and your Great Place to Work 
+  certification, it's clear you value builder-first culture over process 
+  theatre, and that's the environment where I thrive."
+
+--------------------------------------------------------------------------------
+12.2 IMPRESSIVE QUESTIONS TO ASK THEM
+--------------------------------------------------------------------------------
+
+12.2.1 About the role:
+> "The JD mentions the 90-day success metric is owning a client relationship and 
+  having working software in front of real users. What does a typical first 
+  engagement look like, and how quickly do FDEs get embedded with clients?"
+
+12.2.2 About the clients:
+> "You work with pharma, biotech, and healthcare. Are there specific AI use cases 
+  you're seeing the most demand for right now: clinical trial optimisation, 
+  medical documentation, patient engagement, or something else?"
+
+12.2.3 About the tech:
+> "The role mentions MCP, eval harnesses, and agentic patterns. Is NewPage 
+  building internal accelerators or reusable AI components that FDEs contribute 
+  to, or is each engagement greenfield?"
+
+12.2.4 About growth:
+> "The 12-month success metric mentions mentoring and contributing accelerators. 
+  How does NewPage think about career progression for FDEs, is it staying 
+  hands-on or moving toward practice leadership?"
+
+12.2.5 About the team:
+> "How big is the current FDE team, and how do you balance client-embedded work 
+  with internal collaboration and knowledge sharing?"
+
+12.2.6 About challenges:
+> "What's the hardest part of the FDE role that candidates often underestimate?"
+
+12.2.7 About AI in healthcare:
+> "Healthcare has strict regulatory requirements. How does NewPage handle AI 
+  validation and compliance when deploying to life sciences clients?"
+
+12.2.8 Closing question (shows intent):
+> "Based on our conversation today, is there anything about my background or 
+  experience that gives you hesitation about my fit for this role? I'd like the 
+  chance to address it directly."
+
+--------------------------------------------------------------------------------
+12.3 WHY THESE QUESTIONS WORK
+--------------------------------------------------------------------------------
+
+- They reference specifics from the JD (90-day metric, MCP, accelerators)
+- They show you've researched NewPage (Great Place to Work, healthcare focus)
+- They demonstrate you're thinking about impact, not just tasks
+- The closing question shows confidence and gives you a chance to overcome objections
+
+
+================================================================================
+                     GOOD LUCK AT 2:30PM, MAX!
+        You've got the experience, the project, and now the answers.
+                            OWN THE ROOM.
+================================================================================
