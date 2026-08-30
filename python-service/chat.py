@@ -21,6 +21,8 @@ def get_chat_stream(
     model_name: str | None = None,
     provider: str = "huggingface",
     use_rag: bool = True,
+    temperature: float | None = 0.7,
+    custom_instructions: str | None = None,
 ):
     """
     Initiate a streaming chat with optional RAG context retrieval.
@@ -42,6 +44,8 @@ def get_chat_stream(
         model_name: Optional model name override
         provider: LLM provider (huggingface, openai, anthropic, google)
         use_rag: Whether to retrieve and inject document context
+        temperature: Optional sampling temperature
+        custom_instructions: Optional user system-prompt additions
         
     Returns:
         An async generator yielding response chunks
@@ -104,6 +108,8 @@ def get_chat_stream(
         model_name=model_name,
         provider=provider,
         rag_context=rag_context,
+        temperature=temperature,
+        custom_instructions=custom_instructions,
     )
 
     # 4. Return a stream of responses from the AI

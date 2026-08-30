@@ -308,16 +308,27 @@ curl http://127.0.0.1:8000/health/ready \
 
 ## Evaluation Harness
 
-Run RAG and response quality tests:
+Run local unit tests:
 
 ```bash
 cd python-service
-pytest evals/ -v
+pytest evals/ -v -m "not langsmith"
 ```
+
+Run response grounding against LangSmith (`langsmith.evaluate` → dataset `rag-response-grounding`):
+
+```bash
+cd python-service
+python -m evals.grounding
+# or: pytest evals/ -v -m langsmith
+```
+
+Requires `LANGSMITH_API_KEY` (and an LLM provider key). Optional: `EVAL_PROVIDER` / `EVAL_MODEL` (defaults: `openai` / `gpt-4o-mini`). Use `--force-dataset` to recreate the dataset from code.
 
 Test categories:
 - `test_rag_retrieval.py` — Chunking, embedding, retrieval accuracy
-- `test_response_grounding.py` — Source citation, hallucination detection
+- `test_response_grounding.py` — Prompt/confidence unit tests + LangSmith grounding marker
+- `evals/grounding.py` — Dataset + `langsmith.evaluate` harness
 
 ---
 

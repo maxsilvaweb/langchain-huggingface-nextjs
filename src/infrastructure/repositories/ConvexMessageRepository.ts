@@ -13,17 +13,16 @@ export function useConvexMessageRepository(
   conversationId: Id<'conversations'>,
 ): IMessageRepository {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const messages =
-    useQuery(
-      api.messages.list,
-      isLoading || !isAuthenticated ? 'skip' : { conversationId },
-    ) ?? [];
+  const messages = useQuery(
+    api.messages.list,
+    isLoading || !isAuthenticated ? 'skip' : { conversationId },
+  );
   const sendMutation = useMutation(api.messages.send);
   const clearMutation = useMutation(api.messages.clear);
 
   return {
     list(_conversationId: Id<'conversations'>) {
-      return messages as ChatMessage[];
+      return messages as ChatMessage[] | undefined;
     },
 
     async send(message: NewMessage): Promise<void> {

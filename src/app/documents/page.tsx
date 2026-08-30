@@ -2,13 +2,18 @@
 
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, FileText, Loader2, MessageSquare, Plus, Upload } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight, FileText, Loader2, MessageSquare, Plus, Upload } from 'lucide-react';
+import { AppPagination } from '@/components/app-pagination';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/page-header';
+import { PageProgressLoader } from '@/components/page-progress-loader';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+const DOCUMENTS_PAGE_SIZE = 5;
 
 interface Document {
   _id: string;
@@ -42,30 +47,113 @@ export default function DocumentsPage() {
   const [text, setText] = useState('');
   const [source, setSource] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [inputMode, setInputMode] = useState<'paste' | 'upload'>('paste');
+  const [page, setPage] = useState(1);
+
+  const ACCEPTED_UPLOAD_TYPES =
+    '.txt,.md,.markdown,.csv,.json,.html,.htm,.pdf';
+  const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+  const TEXT_LIKE_EXTENSIONS = new Set([
+    '.txt',
+    '.md',
+    '.markdown',
+    '.csv',
+    '.json',
+    '.html',
+    '.htm',
+  ]);
+
+  const resetForm = () => {
+    setText('');
+    setSource('');
+    setSelectedFile(null);
+    setInputMode('paste');
+  };
+
+  const extensionOf = (filename: string) => {
+    const idx = filename.lastIndexOf('.');
+    return idx >= 0 ? filename.slice(idx).toLowerCase() : '';
+  };
+
+  const handleFileChange = async (file: File | null) => {
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error('File too large (max 5 MB)');
+      return;
+    }
+
+    const ext = extensionOf(file.name);
+    const allowed = new Set([
+      ...TEXT_LIKE_EXTENSIONS,
+      '.pdf',
+    ]);
+    if (!allowed.has(ext)) {
+      toast.error('Unsupported file type. Use txt, md, csv, json, html, or pdf.');
+      return;
+    }
+
+    setSelectedFile(file);
+    setSource((current) => current.trim() || file.name);
+    setInputMode('upload');
+
+    if (TEXT_LIKE_EXTENSIONS.has(ext)) {
+      try {
+        const content = await file.text();
+        setText(content);
+      } catch {
+        toast.error('Could not read file as text');
+      }
+    } else {
+      // PDF is parsed server-side; clear paste buffer so we don't double-send.
+      setText('');
+    }
+  };
 
   // Group documents by source
-  const groupedDocuments: GroupedDocument[] = (() => {
+  const groupedDocuments: GroupedDocument[] = useMemo(() => {
     const groups = new Map<string, Document[]>();
-    
+
     for (const doc of documents) {
-      const source = doc.metadata?.source || 'Unknown source';
-      if (!groups.has(source)) {
-        groups.set(source, []);
+      const docSource = doc.metadata?.source || 'Unknown source';
+      if (!groups.has(docSource)) {
+        groups.set(docSource, []);
       }
-      groups.get(source)!.push(doc);
+      groups.get(docSource)!.push(doc);
     }
-    
+
     return Array.from(groups.entries())
-      .map(([source, chunks]) => ({
-        source,
-        chunks: chunks.sort((a, b) => 
-          (a.metadata?.chunk_index ?? 0) - (b.metadata?.chunk_index ?? 0)
+      .map(([docSource, chunks]) => ({
+        source: docSource,
+        chunks: chunks.sort(
+          (a, b) =>
+            (a.metadata?.chunk_index ?? 0) - (b.metadata?.chunk_index ?? 0),
         ),
         totalChunks: chunks.length,
-        createdAt: Math.min(...chunks.map(c => c._creationTime)),
+        createdAt: Math.min(...chunks.map((c) => c._creationTime)),
       }))
       .sort((a, b) => b.createdAt - a.createdAt);
-  })();
+  }, [documents]);
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(groupedDocuments.length / DOCUMENTS_PAGE_SIZE),
+  );
+
+  const pagedDocuments = useMemo(() => {
+    const start = (page - 1) * DOCUMENTS_PAGE_SIZE;
+    return groupedDocuments.slice(start, start + DOCUMENTS_PAGE_SIZE);
+  }, [groupedDocuments, page]);
+
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, pageCount]);
 
   const toggleExpanded = (source: string) => {
     setExpandedSources((prev) => {
@@ -131,40 +219,65 @@ export default function DocumentsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!text.trim() || !source.trim()) {
-      toast.error('Please fill in all fields');
+
+    const trimmedSource = source.trim();
+    if (!trimmedSource) {
+      toast.error('Please provide a source name');
+      return;
+    }
+
+    const isPdfUpload =
+      selectedFile !== null && extensionOf(selectedFile.name) === '.pdf';
+    const hasPasteText = text.trim().length > 0;
+
+    if (!isPdfUpload && !hasPasteText && !selectedFile) {
+      toast.error('Paste text or choose a file to upload');
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
-      const response = await fetch('/api/documents/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim(), source: source.trim() }),
-      });
+      let response: Response;
+
+      if (isPdfUpload && selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('source', trimmedSource);
+        response = await fetch('/api/documents/ingest-file', {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        response = await fetch('/api/documents/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: text.trim(),
+            source: trimmedSource,
+          }),
+        });
+      }
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to ingest document');
+        throw new Error(data.error || data.detail || 'Failed to ingest document');
       }
 
       toast.success(`Document ingested: ${data.chunk_count} chunk(s) created`);
-      setText('');
-      setSource('');
+      resetForm();
       setShowForm(false);
+      setPage(1);
 
-      // Refresh document list
       const listResponse = await fetch('/api/documents');
       const listData = await listResponse.json();
       if (listResponse.ok) {
         setDocuments(listData.documents || []);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to ingest document';
+      const message =
+        error instanceof Error ? error.message : 'Failed to ingest document';
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -178,41 +291,30 @@ export default function DocumentsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-background/95 backdrop-blur-xl">
-        <div className="mx-auto max-w-4xl px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push('/chat')}
-              className="text-white/60 hover:text-white hover:bg-white/10 cursor-pointer"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-semibold text-white">Knowledge Base</h1>
-              <p className="text-sm text-white/50">
-                {documents.length} document{documents.length !== 1 ? 's' : ''} indexed
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setShowForm(!showForm)}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
-            >
-              {showForm ? (
-                'Cancel'
-              ) : (
-                <>
-                  <Plus className="h-4 w-4" />
-                  Add Document
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Knowledge Base"
+        description={`${documents.length} document${documents.length !== 1 ? 's' : ''} indexed`}
+        actions={
+          <Button
+            onClick={() => {
+              if (showForm) {
+                resetForm();
+              }
+              setShowForm(!showForm);
+            }}
+            className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+          >
+            {showForm ? (
+              'Cancel'
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Add Document
+              </>
+            )}
+          </Button>
+        }
+      />
 
       <main className="mx-auto max-w-4xl px-4 py-8">
         {/* How RAG Works - Moved to top */}
@@ -271,9 +373,38 @@ export default function DocumentsPage() {
             onSubmit={handleSubmit}
             className="mb-8 rounded-xl border border-white/10 bg-white/5 p-6 space-y-4"
           >
-            <div className="flex items-center gap-2 text-emerald-400 mb-4">
+            <div className="flex items-center gap-2 text-emerald-400 mb-2">
               <Upload className="h-5 w-5" />
               <span className="font-medium">Add New Document</span>
+            </div>
+
+            <div className="flex gap-2 rounded-lg border border-white/10 bg-black/20 p-1">
+              <button
+                type="button"
+                onClick={() => setInputMode('paste')}
+                disabled={isSubmitting}
+                className={cn(
+                  'flex-1 rounded-md px-3 py-1.5 text-sm transition-colors cursor-pointer',
+                  inputMode === 'paste'
+                    ? 'bg-emerald-700/60 text-white'
+                    : 'text-white/50 hover:text-white hover:bg-white/5',
+                )}
+              >
+                Paste text
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode('upload')}
+                disabled={isSubmitting}
+                className={cn(
+                  'flex-1 rounded-md px-3 py-1.5 text-sm transition-colors cursor-pointer',
+                  inputMode === 'upload'
+                    ? 'bg-emerald-700/60 text-white'
+                    : 'text-white/50 hover:text-white hover:bg-white/5',
+                )}
+              >
+                Upload file
+              </button>
             </div>
 
             <div className="space-y-2">
@@ -281,30 +412,81 @@ export default function DocumentsPage() {
               <Input
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                placeholder="e.g., clinical_trial_results.txt"
+                placeholder="e.g., clinical_trial_results.pdf"
                 disabled={isSubmitting}
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm text-white/70">Document Content</label>
-              <Textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Paste your document text here..."
-                disabled={isSubmitting}
-                rows={8}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-y"
-              />
-              <p className="text-xs text-white/40">
-                {text.length.toLocaleString()} characters
-              </p>
-            </div>
+            {inputMode === 'upload' ? (
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">File</label>
+                <Input
+                  type="file"
+                  accept={ACCEPTED_UPLOAD_TYPES}
+                  disabled={isSubmitting}
+                  onChange={(e) => {
+                    void handleFileChange(e.target.files?.[0] ?? null);
+                  }}
+                  className="cursor-pointer bg-white/5 border-white/10 text-white file:mr-3 file:rounded-md file:border-0 file:bg-emerald-800/60 file:px-3 file:py-1 file:text-sm file:text-emerald-100"
+                />
+                <p className="text-xs text-white/40">
+                  Supports .txt, .md, .csv, .json, .html, .pdf — max 5 MB
+                </p>
+                {selectedFile ? (
+                  <p className="text-xs text-emerald-300/80">
+                    Selected: {selectedFile.name} (
+                    {(selectedFile.size / 1024).toFixed(1)} KB)
+                    {extensionOf(selectedFile.name) === '.pdf'
+                      ? ' — text will be extracted on upload'
+                      : ' — preview below, edit before ingesting if needed'}
+                  </p>
+                ) : null}
+                {selectedFile &&
+                TEXT_LIKE_EXTENSIONS.has(extensionOf(selectedFile.name)) ? (
+                  <div className="space-y-2 pt-2">
+                    <label className="text-sm text-white/70">Preview</label>
+                    <Textarea
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      disabled={isSubmitting}
+                      rows={8}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-y"
+                    />
+                    <p className="text-xs text-white/40">
+                      {text.length.toLocaleString()} characters
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">Document Content</label>
+                <Textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Paste your document text here..."
+                  disabled={isSubmitting}
+                  rows={8}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-y"
+                />
+                <p className="text-xs text-white/40">
+                  {text.length.toLocaleString()} characters
+                </p>
+              </div>
+            )}
 
             <Button
               type="submit"
-              disabled={isSubmitting || !text.trim() || !source.trim()}
+              disabled={
+                isSubmitting ||
+                !source.trim() ||
+                (inputMode === 'paste'
+                  ? !text.trim()
+                  : !selectedFile ||
+                    (extensionOf(selectedFile.name) !== '.pdf' &&
+                      !text.trim()))
+              }
               className="w-full gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
@@ -324,9 +506,7 @@ export default function DocumentsPage() {
 
         {/* Document List */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-white/40" />
-          </div>
+          <PageProgressLoader label="Loading documents" />
         ) : documents.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="h-12 w-12 mx-auto text-white/20 mb-4" />
@@ -345,8 +525,9 @@ export default function DocumentsPage() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {groupedDocuments.map((group) => {
+          <div className="space-y-4">
+            <div className="space-y-3">
+              {pagedDocuments.map((group) => {
               const isExpanded = expandedSources.has(group.source);
               const previewText = group.chunks[0]?.text || '';
               
@@ -413,6 +594,17 @@ export default function DocumentsPage() {
                 </div>
               );
             })}
+            </div>
+
+            <AppPagination
+              page={page}
+              pageCount={pageCount}
+              onPageChange={(next) => {
+                setPage(next);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              summary={`${groupedDocuments.length} document${groupedDocuments.length !== 1 ? 's' : ''} · ${DOCUMENTS_PAGE_SIZE} per page`}
+            />
           </div>
         )}
       </main>

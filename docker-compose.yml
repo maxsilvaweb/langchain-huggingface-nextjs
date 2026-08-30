@@ -36,6 +36,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - PORT=8000
       - NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
       - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}

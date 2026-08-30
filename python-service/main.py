@@ -11,12 +11,13 @@ from typing import Any, Optional
 
 import chat as chat_service
 import db as convex
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from constants import MAX_INPUT_LENGTH, MAX_INGEST_TEXT_LENGTH, SERVICE_VERSION
 from container import get_container
+from document_extract import extract_text_from_bytes
 from guardrails import validate_input_or_raise_http
 from logging_config import get_logger, set_trace_id
 
@@ -74,6 +75,17 @@ class ChatRequest(BaseModel):
     modelName: Optional[str] = None
     provider: str = "huggingface"
     useRag: bool = Field(default=True, description="Whether to use RAG for context retrieval")
+    temperature: Optional[float] = Field(
+        default=0.7,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature for the LLM",
+    )
+    customInstructions: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+        description="Optional user-defined system prompt additions",
+    )
 
 
 class IngestTextRequest(BaseModel):
@@ -121,6 +133,8 @@ async def chat(request: ChatRequest, authorization: str | None = Header(default=
             model=request.modelName,
             provider=request.provider,
             use_rag=request.useRag,
+            temperature=request.temperature,
+            has_custom_instructions=bool(request.customInstructions),
             message_length=len(validated_message),
         )
         
@@ -133,6 +147,8 @@ async def chat(request: ChatRequest, authorization: str | None = Header(default=
             request.modelName,
             request.provider,
             use_rag=request.useRag,
+            temperature=request.temperature,
+            custom_instructions=request.customInstructions,
         )
 
         async def stream_generator():
@@ -193,6 +209,60 @@ async def ingest_text(
         raise
     except Exception as e:
         log.error("ingest_error", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/documents/ingest-file")
+async def ingest_file(
+    file: UploadFile = File(...),
+    source: str | None = Form(default=None),
+    authorization: str | None = Header(default=None),
+):
+    """
+    Upload a document file (.txt, .md, .pdf, …), extract text, and ingest it.
+    """
+    try:
+        convex_token = get_bearer_token(authorization)
+        filename = file.filename or "upload.txt"
+        data = await file.read()
+        text = extract_text_from_bytes(filename, data)
+
+        if len(text) > MAX_INGEST_TEXT_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Extracted text exceeds max length ({MAX_INGEST_TEXT_LENGTH})",
+            )
+
+        source_name = (source or "").strip() or filename
+
+        container = get_container()
+        ingester = container.get_document_ingester(convex_token)
+
+        doc_ids = await ingester.ingest(
+            text=text,
+            source=source_name,
+            metadata={"filename": filename, "content_type": file.content_type},
+        )
+
+        log.info(
+            "document_file_ingested",
+            source=source_name,
+            filename=filename,
+            chunk_count=len(doc_ids),
+            bytes=len(data),
+        )
+
+        return {
+            "success": True,
+            "message": f"Ingested {len(doc_ids)} chunks from {filename}",
+            "chunk_count": len(doc_ids),
+            "document_ids": doc_ids,
+            "source": source_name,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("ingest_file_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

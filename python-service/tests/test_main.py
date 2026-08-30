@@ -43,6 +43,9 @@ async def test_chat_endpoint():
             "token-123",
             None,
             "huggingface",
+            use_rag=True,
+            temperature=0.7,
+            custom_instructions=None,
         )
         
         # NOTE: save_interaction is intentionally NOT called from the Python backend.

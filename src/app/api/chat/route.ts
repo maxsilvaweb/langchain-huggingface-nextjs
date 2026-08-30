@@ -36,6 +36,9 @@ export async function POST(req: Request) {
       });
     }
 
+    const user = await fetchQuery(api.users.me, {}, { token });
+    const preferences = user?.preferences ?? {};
+
     // Proxy request to Python backend
     const response = await fetch(PYTHON_CHAT_API_URL, {
       method: 'POST',
@@ -43,7 +46,15 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ message, conversationId, modelName, provider }),
+      body: JSON.stringify({
+        message,
+        conversationId,
+        modelName,
+        provider,
+        useRag: preferences.useRag ?? true,
+        temperature: preferences.temperature ?? 0.7,
+        customInstructions: preferences.customInstructions ?? '',
+      }),
     });
 
     return new Response(response.body, {

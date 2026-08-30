@@ -34,12 +34,20 @@ class OpenAIProvider(ILLMProvider):
         if not self._api_key:
             raise ValueError("OpenAI API key not configured")
     
-    def get_model(self, model_name: str | None = None) -> ChatOpenAI:
-        return ChatOpenAI(
-            model=model_name or self.DEFAULT_MODEL,
-            api_key=self._api_key,
-            streaming=True,
-        )
+    def get_model(
+        self,
+        model_name: str | None = None,
+        *,
+        temperature: float | None = None,
+    ) -> ChatOpenAI:
+        kwargs: dict[str, Any] = {
+            "model": model_name or self.DEFAULT_MODEL,
+            "api_key": self._api_key,
+            "streaming": True,
+        }
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        return ChatOpenAI(**kwargs)
     
     @property
     def provider_name(self) -> str:
@@ -56,12 +64,20 @@ class AnthropicProvider(ILLMProvider):
         if not self._api_key:
             raise ValueError("Anthropic API key not configured")
     
-    def get_model(self, model_name: str | None = None) -> ChatAnthropic:
-        return ChatAnthropic(
-            model=model_name or self.DEFAULT_MODEL,
-            api_key=self._api_key,
-            streaming=True,
-        )
+    def get_model(
+        self,
+        model_name: str | None = None,
+        *,
+        temperature: float | None = None,
+    ) -> ChatAnthropic:
+        kwargs: dict[str, Any] = {
+            "model": model_name or self.DEFAULT_MODEL,
+            "api_key": self._api_key,
+            "streaming": True,
+        }
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        return ChatAnthropic(**kwargs)
     
     @property
     def provider_name(self) -> str:
@@ -78,12 +94,20 @@ class GoogleProvider(ILLMProvider):
         if not self._api_key:
             raise ValueError("Google API key not configured")
     
-    def get_model(self, model_name: str | None = None) -> ChatGoogleGenerativeAI:
-        return ChatGoogleGenerativeAI(
-            model=model_name or self.DEFAULT_MODEL,
-            google_api_key=self._api_key,
-            streaming=True,
-        )
+    def get_model(
+        self,
+        model_name: str | None = None,
+        *,
+        temperature: float | None = None,
+    ) -> ChatGoogleGenerativeAI:
+        kwargs: dict[str, Any] = {
+            "model": model_name or self.DEFAULT_MODEL,
+            "google_api_key": self._api_key,
+            "streaming": True,
+        }
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        return ChatGoogleGenerativeAI(**kwargs)
     
     @property
     def provider_name(self) -> str:
@@ -100,12 +124,20 @@ class HuggingFaceProvider(ILLMProvider):
         if not self._api_key:
             raise ValueError("HuggingFace API key not configured")
     
-    def get_model(self, model_name: str | None = None) -> ChatHuggingFace:
-        endpoint = HuggingFaceEndpoint(
-            repo_id=model_name or self.DEFAULT_MODEL,
-            huggingfacehub_api_token=self._api_key,
-            task="text-generation",
-        )
+    def get_model(
+        self,
+        model_name: str | None = None,
+        *,
+        temperature: float | None = None,
+    ) -> ChatHuggingFace:
+        endpoint_kwargs: dict[str, Any] = {
+            "repo_id": model_name or self.DEFAULT_MODEL,
+            "huggingfacehub_api_token": self._api_key,
+            "task": "text-generation",
+        }
+        if temperature is not None:
+            endpoint_kwargs["temperature"] = temperature
+        endpoint = HuggingFaceEndpoint(**endpoint_kwargs)
         return ChatHuggingFace(llm=endpoint)
     
     @property

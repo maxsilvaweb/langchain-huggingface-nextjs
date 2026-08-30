@@ -1,2 +1,3 @@
 # RAG Evaluation Harness
-# Run with: pytest python-service/evals/ -v
+# Unit tests:  pytest evals/ -v
+# LangSmith:   python -m evals.grounding

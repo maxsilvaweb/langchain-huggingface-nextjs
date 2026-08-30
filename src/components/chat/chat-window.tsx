@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useChat } from '@/hooks/use-chat';
 import { ModelSelection } from '@/domain/value-objects';
+import type { ChatMessage } from '@/domain/repositories';
 import type { Id } from '@/lib/convex/dataModel';
 import { AVAILABLE_MODELS } from '@/lib/ai/models';
 import { useSelectedModel } from '@/components/providers/ModelProvider';
@@ -13,21 +13,34 @@ import { useScrollManager } from './chat-window/useScrollManager';
 
 interface ChatWindowProps {
   conversationId: Id<'conversations'>;
+  messages: ChatMessage[];
+  isSending: boolean;
+  streamingMessage: string;
+  onSendMessage: (
+    message: string,
+    modelName?: string,
+    provider?: string,
+  ) => Promise<void>;
+  failedPromptBody?: string | null;
+  onRetryFailedPrompt?: () => void;
   onDeleteChat?: () => void;
-  /** Override isSending from a parent (e.g. hero form submission in flight) */
-  externalIsSending?: boolean;
-  /** Override streamingMessage from a parent */
-  externalStreamingMessage?: string;
 }
 
 export function ChatWindow({
   conversationId,
+  messages,
+  isSending,
+  streamingMessage,
+  onSendMessage,
+  failedPromptBody,
+  onRetryFailedPrompt,
   onDeleteChat,
-  externalIsSending,
-  externalStreamingMessage,
 }: ChatWindowProps) {
   const [input, setInput] = useState('');
-  const { selectedModelId: selectedModel, setSelectedModelId: setSelectedModel } = useSelectedModel();
+  const {
+    selectedModelId: selectedModel,
+    setSelectedModelId: setSelectedModel,
+  } = useSelectedModel();
   const {
     scrollRef,
     isAtBottom,
@@ -37,12 +50,15 @@ export function ChatWindow({
     measureMetrics,
   } = useScrollManager();
 
-  const { messages, streamingMessage, isSending, sendMessage } =
-    useChat(conversationId);
-
-  // Use external state (from hero form) when provided, otherwise internal
-  const effectiveIsSending = externalIsSending ?? isSending;
-  const effectiveStreamingMessage = externalStreamingMessage ?? streamingMessage;
+  useEffect(() => {
+    setInput('');
+    // Land at the bottom of the newly committed thread without animating from the previous scroll position.
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
+  }, [conversationId, scrollRef]);
 
   useEffect(() => {
     measureMetrics();
@@ -58,13 +74,13 @@ export function ChatWindow({
       cancelAnimationFrame(rafId);
       window.clearTimeout(timeout);
     };
-  }, [messages, effectiveStreamingMessage, effectiveIsSending]);
+  }, [messages, streamingMessage, isSending, measureMetrics]);
 
   useEffect(() => {
     if (scrollRef.current && isAtBottom) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, effectiveIsSending, isAtBottom, scrollRef]);
+  }, [messages, isSending, streamingMessage, isAtBottom, scrollRef]);
 
   const submitMessage = async () => {
     const message = input.trim();
@@ -75,7 +91,7 @@ export function ChatWindow({
       selectedModel,
       AVAILABLE_MODELS,
     );
-    await sendMessage(
+    await onSendMessage(
       message,
       modelSelection?.getId() ?? selectedModel,
       modelSelection?.getProvider(),
@@ -92,16 +108,18 @@ export function ChatWindow({
     <ChatWindowContainer>
       <ChatMessageList
         messages={messages}
-        streamingMessage={effectiveStreamingMessage}
-        isSending={effectiveIsSending}
+        streamingMessage={streamingMessage}
+        isSending={isSending}
         scrollRef={scrollRef}
         onScroll={handleScroll}
+        failedPromptBody={failedPromptBody}
+        onRetryFailedPrompt={onRetryFailedPrompt}
       />
 
       <ChatFooter
         input={input}
         selectedModel={selectedModel}
-        isSending={effectiveIsSending}
+        isSending={isSending}
         hasOverflow={hasOverflow}
         isAtBottom={isAtBottom}
         onInputChange={setInput}

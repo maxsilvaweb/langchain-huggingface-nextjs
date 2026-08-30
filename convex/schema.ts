@@ -9,6 +9,14 @@ export default defineSchema({
     name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     lastSeenAt: v.optional(v.float64()),
+    preferences: v.optional(
+      v.object({
+        defaultModelId: v.optional(v.string()),
+        useRag: v.optional(v.boolean()),
+        temperature: v.optional(v.number()),
+        customInstructions: v.optional(v.string()),
+      }),
+    ),
   }).index('by_external_id', ['externalId']),
 
   conversations: defineTable({

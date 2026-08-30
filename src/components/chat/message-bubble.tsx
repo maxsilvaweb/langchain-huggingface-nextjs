@@ -1,7 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
-import { User, Bot } from 'lucide-react';
+import { User, Bot, RotateCcw, Loader2 } from 'lucide-react';
 
 export interface MessageBubbleProps {
   message: {
@@ -10,15 +10,26 @@ export interface MessageBubbleProps {
     _id: string;
     _creationTime: number;
   };
+  /** Show inline retry for a failed human prompt. */
+  showRetry?: boolean;
+  isRetrying?: boolean;
+  onRetry?: () => void;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  showRetry = false,
+  isRetrying = false,
+  onRetry,
+}: MessageBubbleProps) {
   const isUser = message.author === 'user';
 
   return (
     <div
       className={cn(
-        'flex w-full mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300',
+        // No entrance animation — thread switches remount the list and would
+        // cascade-flicker every bubble.
+        'flex w-full mb-6',
         isUser ? 'justify-end' : 'justify-start',
       )}
     >
@@ -60,12 +71,37 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             </div>
           </div>
 
-          <span className="text-[10px] font-medium text-muted-foreground/60 px-1 uppercase tracking-wider">
-            {new Date(message._creationTime).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
+          <div
+            className={cn(
+              'flex items-center gap-2 px-1',
+              isUser ? 'flex-row-reverse' : 'flex-row',
+            )}
+          >
+            <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
+              {new Date(message._creationTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+
+            {showRetry && onRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                disabled={isRetrying}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-rose-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Retry"
+                title="Retry"
+              >
+                {isRetrying ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3 w-3" />
+                )}
+                <span>Retry</span>
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

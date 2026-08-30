@@ -2,7 +2,7 @@
 
 import { useAuth, useUser } from '@clerk/nextjs';
 import * as React from 'react';
-import { Plus, Pencil, FileText } from 'lucide-react';
+import { Plus, Pencil, FileText, Settings2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useChatSession } from '@/hooks/use-chat-session';
@@ -15,11 +15,12 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { ActionButton } from '@/components/ui/action-button';
 import { Separator } from '@/components/ui/separator';
 import { AppDialog, AppDialogFooter } from '@/components/ui/app-dialog';
 import { Input } from '@/components/ui/input';
 import { AccountSection } from './AccountSection';
+import { useNavigationLoading } from '@/components/providers/NavigationLoadingProvider';
+import { useSelectedModel } from '@/components/providers/ModelProvider';
 import {
   CHAT_SESSION_STORAGE_KEY,
   NEW_CHAT_SHORTCUT_KEY,
@@ -28,7 +29,7 @@ import {
   SIDEBAR_SEARCH_MIN_LENGTH,
 } from '@/lib/globals';
 import { DEFAULT_CONVERSATION_TITLE } from '@/lib/locale';
-import { isApplePlatform, isEditableEventTarget } from '@/lib/utils';
+import { cn, isApplePlatform, isEditableEventTarget } from '@/lib/utils';
 import type { Id } from '@/lib/convex/dataModel';
 import {
   type ConversationListItem,
@@ -54,9 +55,12 @@ export function AppSidebar({
   const params = useParams();
   const router = useRouter();
   const { startNewSession } = useChatSession({ autoCreate: false });
+  const { startNavigation } = useNavigationLoading();
+  const { resetToDefaultModel } = useSelectedModel();
   const conversationId = params?.conversationId as
     Id<'conversations'> | undefined;
   const { isMobile, setOpenMobile } = useSidebar();
+  const [isPendingNav, startTransition] = React.useTransition();
 
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [newTitle, setNewTitle] = React.useState('');
@@ -180,6 +184,9 @@ export function AppSidebar({
       setIsCreating(true);
       if (isMobile) setOpenMobile(false);
 
+      // New chats should use the Settings default, not the last in-chat override.
+      resetToDefaultModel();
+
       if (emptyConversationId) {
         router.push(`/chat/${emptyConversationId}`);
         return;
@@ -198,6 +205,7 @@ export function AppSidebar({
     isConvexLoading,
     isCreating,
     isMobile,
+    resetToDefaultModel,
     router,
     setOpenMobile,
     startNewSession,
@@ -231,10 +239,13 @@ export function AppSidebar({
 
   const handleSelectConversation = React.useCallback(
     (id: string) => {
+      if (id === conversationId) return;
       if (isMobile) setOpenMobile(false);
-      router.push(`/chat/${id}`);
+      startTransition(() => {
+        router.push(`/chat/${id}`);
+      });
     },
-    [isMobile, router, setOpenMobile],
+    [conversationId, isMobile, router, setOpenMobile, startTransition],
   );
 
   const handleRename = React.useCallback(async () => {
@@ -285,42 +296,84 @@ export function AppSidebar({
         </div>
         <Separator className="bg-white/10" />
         <div className="space-y-2">
-          <ActionButton
-            onClick={() => {
-              if (isMobile) setOpenMobile(false);
-              router.push('/documents');
-            }}
-            icon={FileText}
-            label="RAG Documents"
-            theme="green"
-            aria-label="Manage RAG knowledge base documents"
-            title="Manage RAG knowledge base documents"
-          />
-          <ActionButton
-          onClick={handleNewChat}
-          icon={Plus}
-          label={DEFAULT_CONVERSATION_TITLE}
-          theme="green"
-          shortcut={newChatShortcutKeys}
-          disabled={isCreating || isConvexLoading || hasEmptyChat}
-          aria-label={newChatActionLabel}
-          title={newChatActionLabel}
-        />
+          <div className="overflow-hidden rounded-xl border border-emerald-800/80 bg-emerald-950/60 shadow-lg">
+            <p className="px-3 pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300/70">
+              Menu
+            </p>
+            <button
+              type="button"
+              onClick={handleNewChat}
+              disabled={isCreating || isConvexLoading || hasEmptyChat}
+              className="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-emerald-100 transition-colors hover:bg-emerald-900/50 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={newChatActionLabel}
+              title={newChatActionLabel}
+            >
+              <Plus className="h-4 w-4 shrink-0 text-emerald-300" />
+              <span className="flex-1">{DEFAULT_CONVERSATION_TITLE}</span>
+              {newChatShortcutKeys.length ? (
+                <span className="ml-auto hidden items-center gap-1 md:flex">
+                  {newChatShortcutKeys.map((key) => (
+                    <kbd
+                      key={key}
+                      className="inline-flex min-w-5 items-center justify-center rounded-md border border-emerald-700/60 bg-emerald-900/40 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-emerald-200/80"
+                    >
+                      {key}
+                    </kbd>
+                  ))}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+                startNavigation('/documents');
+                router.push('/documents');
+              }}
+              className="flex w-full cursor-pointer items-center gap-3 border-t border-emerald-800/60 px-3 py-2.5 text-left text-sm font-medium text-emerald-100 transition-colors hover:bg-emerald-900/50"
+              aria-label="Manage RAG knowledge base documents"
+              title="Manage RAG knowledge base documents"
+            >
+              <FileText className="h-4 w-4 shrink-0 text-emerald-300" />
+              RAG Documents
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+                startNavigation('/settings');
+                router.push('/settings');
+              }}
+              className="flex w-full cursor-pointer items-center gap-3 border-t border-emerald-800/60 px-3 py-2.5 text-left text-sm font-medium text-emerald-100 transition-colors hover:bg-emerald-900/50"
+              aria-label="Open user settings"
+              title="Open user settings"
+            >
+              <Settings2 className="h-4 w-4 shrink-0 text-emerald-300" />
+              Settings
+            </button>
+          </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="pt-0">
-        <SidebarGroup className="pt-0">
-          <div className="mx-2 mt-0 overflow-hidden rounded-xl bg-slate-950/60 backdrop-blur-md border border-white/8">
-            <SearchSection
-              value={search.rawQuery}
-              onChange={search.setQuery}
-              onClear={search.reset}
-              inputRef={searchInputRef}
-              isSearching={search.isSearching}
-              isEmpty={search.isEmpty}
-              totalMatches={search.totalMatches}
-            />
+      <SidebarContent className="min-h-0 overflow-hidden pt-0">
+        <SidebarGroup className="flex min-h-0 flex-1 flex-col p-0 pt-0">
+          <div
+            className={cn(
+              'mx-2 mb-2 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/8 bg-slate-950/60 backdrop-blur-md transition-opacity duration-150',
+              isPendingNav && 'opacity-70',
+            )}
+          >
+            <div className="shrink-0">
+              <SearchSection
+                value={search.rawQuery}
+                onChange={search.setQuery}
+                onClear={search.reset}
+                inputRef={searchInputRef}
+                isSearching={search.isSearching}
+                isEmpty={search.isEmpty}
+                totalMatches={search.totalMatches}
+              />
+            </div>
             <RecentChatsSection
               conversations={conversations}
               displayItems={search.displayItems}

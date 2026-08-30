@@ -5,6 +5,7 @@ import { ReactNode } from 'react';
 import { ClerkProvider } from './ClerkProvider';
 import { ConvexClientProvider } from './ConvexProvider';
 import { ModelProvider } from './ModelProvider';
+import { NavigationLoadingProvider } from './NavigationLoadingProvider';
 import { ThemeProvider } from './ThemeProvider';
 import { ToasterProvider } from './ToasterProvider';
 
@@ -23,8 +24,10 @@ export function Providers({ children }: ProvidersProps) {
       <ClerkProvider>
         <ConvexClientProvider>
           <ModelProvider>
-            {children}
-            <ToasterProvider />
+            <NavigationLoadingProvider>
+              {children}
+              <ToasterProvider />
+            </NavigationLoadingProvider>
           </ModelProvider>
         </ConvexClientProvider>
       </ClerkProvider>
@@ -36,6 +39,7 @@ export {
   ClerkProvider,
   ConvexClientProvider,
   ModelProvider,
+  NavigationLoadingProvider,
   ThemeProvider,
   ToasterProvider,
 };

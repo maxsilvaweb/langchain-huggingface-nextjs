@@ -18,6 +18,7 @@ interface ModelSelectorProps {
   disabled?: boolean;
   className?: string;
   triggerClassName?: string;
+  showToast?: boolean;
 }
 
 export function ModelSelector({
@@ -26,6 +27,7 @@ export function ModelSelector({
   disabled,
   className,
   triggerClassName,
+  showToast = true,
 }: ModelSelectorProps) {
   return (
     <div className={cn('flex items-center gap-4', className)}>
@@ -33,6 +35,7 @@ export function ModelSelector({
         value={selectedModel}
         onValueChange={(newModelId) => {
           onModelChange(newModelId);
+          if (!showToast) return;
           const newModelObj = AVAILABLE_MODELS.find((m) => m.id === newModelId);
           if (newModelObj) {
             toast.success(`Switched to ${newModelObj.name}`);

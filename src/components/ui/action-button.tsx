@@ -59,20 +59,27 @@ const themeStyles: Record<
   },
 };
 
-export function ActionButton({
-  icon: Icon,
-  label,
-  theme = 'green',
-  className,
-  disabled,
-  disabledIcon: DisabledIcon = Ban,
-  shortcut,
-  ...props
-}: ActionButtonProps) {
+export const ActionButton = React.forwardRef<
+  HTMLButtonElement,
+  ActionButtonProps
+>(function ActionButton(
+  {
+    icon: Icon,
+    label,
+    theme = 'green',
+    className,
+    disabled,
+    disabledIcon: DisabledIcon = Ban,
+    shortcut,
+    ...props
+  },
+  ref,
+) {
   const styles = themeStyles[theme];
 
   return (
     <Button
+      ref={ref}
       variant="outline"
       disabled={disabled}
       className={cn(
@@ -128,4 +135,4 @@ export function ActionButton({
       ) : null}
     </Button>
   );
-}
+});

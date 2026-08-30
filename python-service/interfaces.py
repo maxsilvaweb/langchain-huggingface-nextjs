@@ -82,7 +82,12 @@ class ILLMProvider(Protocol):
     """
     
     @abstractmethod
-    def get_model(self, model_name: str | None = None) -> Any:
+    def get_model(
+        self,
+        model_name: str | None = None,
+        *,
+        temperature: float | None = None,
+    ) -> Any:
         """Get a configured LLM model instance."""
         ...
     

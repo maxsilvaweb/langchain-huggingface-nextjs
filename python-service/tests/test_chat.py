@@ -28,14 +28,20 @@ async def test_get_chat_stream():
         mock_llm.get_chain.return_value = mock_chain
 
         # 3. Call the function
-        result = get_chat_stream("new msg", "conv1", "token-123")
+        result = get_chat_stream("new msg", "conv1", "token-123", use_rag=False)
 
         # 4. Assertions
         assert result == "stream_iterator"
         
         # Verify dependencies were called
         mock_db.get_history.assert_called_once_with("conv1", "token-123")
-        mock_llm.get_chain.assert_called_once_with(None, "huggingface")
+        mock_llm.get_chain.assert_called_once_with(
+            model_name=None,
+            provider="huggingface",
+            rag_context="",
+            temperature=0.7,
+            custom_instructions=None,
+        )
 
         # Verify history conversion logic in chat.py
         args, _ = mock_chain.astream.call_args

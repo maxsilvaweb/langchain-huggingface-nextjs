@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Id } from '@/lib/convex/dataModel';
+import type { ChatMessage } from '@/domain/repositories';
 import { MessageContent } from '@/domain/value-objects';
 import {
   useConvexConversationRepository,
@@ -10,15 +11,58 @@ import {
 import { useMessageSender, useTitleGenerator } from '@/hooks/chat';
 import { toast } from 'sonner';
 
-export function useChat(conversationId: Id<'conversations'>) {
-  const messageRepository = useConvexMessageRepository(conversationId);
+type DisplayedThread = {
+  conversationId: Id<'conversations'>;
+  messages: ChatMessage[];
+};
+
+export type FailedPrompt = {
+  body: string;
+  modelName?: string;
+  provider?: string;
+};
+
+/**
+ * Survives Next.js remounts of `/chat/[conversationId]` so we can keep showing
+ * the previous thread instead of flashing a cold loader.
+ */
+let lastDisplayedThread: DisplayedThread | null = null;
+
+/**
+ * Loads messages for `targetConversationId`, but only commits the UI thread
+ * once data is ready — previous messages stay mounted until then (no flicker).
+ */
+export function useChat(targetConversationId: Id<'conversations'>) {
+  const messageRepository = useConvexMessageRepository(targetConversationId);
   const conversationRepository = useConvexConversationRepository();
-  const messages = messageRepository.list(conversationId) ?? [];
+  const listedMessages = messageRepository.list(targetConversationId);
+
+  const [display, setDisplay] = useState<DisplayedThread | null>(
+    () => lastDisplayedThread,
+  );
+
+  useEffect(() => {
+    if (listedMessages === undefined) return;
+    const next: DisplayedThread = {
+      conversationId: targetConversationId,
+      messages: listedMessages,
+    };
+    lastDisplayedThread = next;
+    setDisplay(next);
+  }, [targetConversationId, listedMessages]);
+
+  const conversationId = display?.conversationId ?? targetConversationId;
+  const messages = display?.messages ?? [];
+  const isSwitching =
+    display !== null && display.conversationId !== targetConversationId;
+  const isColdLoading = display === null;
+
   const {
     isSending,
     error: senderError,
     streamingMessage,
     sendMessage: streamMessage,
+    reset: resetSender,
   } = useMessageSender();
   const { generateTitle } = useTitleGenerator(
     async ({ conversationId, title }) => {
@@ -27,10 +71,44 @@ export function useChat(conversationId: Id<'conversations'>) {
   );
 
   const [error, setError] = useState<string | null>(null);
+  const [failedPrompt, setFailedPrompt] = useState<FailedPrompt | null>(null);
+
+  useEffect(() => {
+    resetSender();
+    setError(null);
+    setFailedPrompt(null);
+  }, [targetConversationId, resetSender]);
+
+  const completeAiReply = useCallback(
+    async (
+      message: string,
+      activeId: Id<'conversations'>,
+      modelName?: string,
+      provider?: string,
+    ) => {
+      const aiResponse = await streamMessage(message, activeId, {
+        modelName,
+        provider,
+      });
+
+      if (!aiResponse) {
+        throw new Error(senderError || 'Failed to fetch AI response');
+      }
+
+      await messageRepository.send({
+        body: aiResponse,
+        author: 'ai',
+        conversationId: activeId,
+      });
+    },
+    [messageRepository, senderError, streamMessage],
+  );
 
   const runChatRequest = useCallback(
     async (rawMessage: string, modelName?: string, provider?: string) => {
-      if (isSending) return;
+      if (isSending || isSwitching || isColdLoading || !display) return;
+
+      const activeId = display.conversationId;
 
       let message: string;
       try {
@@ -43,73 +121,97 @@ export function useChat(conversationId: Id<'conversations'>) {
       }
 
       setError(null);
+      setFailedPrompt(null);
+
+      let userPersisted = false;
 
       try {
-        const isFirstMessage = messages.length === 0;
+        const isFirstMessage = display.messages.length === 0;
 
         await messageRepository.send({
           body: message,
           author: 'user',
-          conversationId,
+          conversationId: activeId,
         });
+        userPersisted = true;
 
         if (isFirstMessage) {
-          void generateTitle(message, conversationId);
+          void generateTitle(message, activeId);
         }
 
-        const aiResponse = await streamMessage(message, conversationId, {
-          modelName,
-          provider,
-        });
-
-        if (!aiResponse) {
-          throw new Error(senderError || 'Failed to fetch AI response');
-        }
-
-        await messageRepository.send({
-          body: aiResponse,
-          author: 'ai',
-          conversationId,
-        });
+        await completeAiReply(message, activeId, modelName, provider);
       } catch (chatError) {
-        const message =
+        const errMessage =
           chatError instanceof Error ? chatError.message : 'Unknown chat error';
-        setError(message);
+        setError(errMessage);
+        if (userPersisted) {
+          setFailedPrompt({ body: message, modelName, provider });
+        }
 
         toast.error('Message failed', {
-          description: message,
-          action: {
-            label: 'Retry',
-            onClick: () => {
-              // We intentionally do not await this so it fires in background
-              void runChatRequest(rawMessage, modelName, provider);
-            },
-          },
+          description: errMessage,
         });
       }
     },
     [
-      conversationId,
+      completeAiReply,
+      display,
       generateTitle,
+      isColdLoading,
       isSending,
+      isSwitching,
       messageRepository,
-      messages.length,
-      senderError,
-      streamMessage,
     ],
   );
 
-  const clearMessages = useCallback(async () => {
+  const retryFailedPrompt = useCallback(async () => {
+    if (!failedPrompt || !display || isSending || isSwitching) return;
+
+    const activeId = display.conversationId;
     setError(null);
-    await messageRepository.clear(conversationId);
-  }, [conversationId, messageRepository]);
+
+    try {
+      await completeAiReply(
+        failedPrompt.body,
+        activeId,
+        failedPrompt.modelName,
+        failedPrompt.provider,
+      );
+      setFailedPrompt(null);
+    } catch (chatError) {
+      const errMessage =
+        chatError instanceof Error ? chatError.message : 'Unknown chat error';
+      setError(errMessage);
+      toast.error('Retry failed', {
+        description: errMessage,
+      });
+    }
+  }, [
+    completeAiReply,
+    display,
+    failedPrompt,
+    isSending,
+    isSwitching,
+  ]);
+
+  const clearMessages = useCallback(async () => {
+    if (!display) return;
+    setError(null);
+    setFailedPrompt(null);
+    await messageRepository.clear(display.conversationId);
+  }, [display, messageRepository]);
 
   return {
+    conversationId,
     messages,
+    isSwitching,
+    isColdLoading,
     streamingMessage,
     isSending,
     error: error ?? senderError,
+    failedPrompt,
     sendMessage: runChatRequest,
+    retryFailedPrompt,
     clearMessages,
   };
 }

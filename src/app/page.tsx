@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/nextjs';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { SetupNotice } from '@/components/setup-notice';
+import { getActiveChatHref } from '@/lib/chat-navigation';
 import { APP_DESCRIPTION, APP_NAME } from '@/lib/locale';
 
 export default function Home() {
@@ -22,7 +23,7 @@ export default function Home() {
     }
 
     if (hasEnv) {
-      router.replace('/chat');
+      router.replace(getActiveChatHref());
     }
   }, [authLoaded, hasEnv, isSignedIn, router]);
 

@@ -45,7 +45,7 @@ export function RecentChatsSection({
   onDeleteConversation,
 }: RecentChatsSectionProps) {
   return (
-    <SidebarGroupContent className="px-2 pb-3">
+    <SidebarGroupContent className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/35">
       <SidebarMenu className="gap-1">
         {displayItems?.map((conversation) => {
           const effectiveTitle =

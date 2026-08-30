@@ -16,6 +16,9 @@ interface ChatMessageListProps {
   isSending: boolean;
   scrollRef: React.RefObject<HTMLDivElement | null>;
   onScroll: () => void;
+  /** Body of the human prompt that failed (shows Retry on that bubble). */
+  failedPromptBody?: string | null;
+  onRetryFailedPrompt?: () => void;
 }
 
 export function ChatMessageList({
@@ -24,7 +27,21 @@ export function ChatMessageList({
   isSending,
   scrollRef,
   onScroll,
+  failedPromptBody,
+  onRetryFailedPrompt,
 }: ChatMessageListProps) {
+  // Prefer the last matching user message (the one that failed after send).
+  const failedMessageId = (() => {
+    if (!failedPromptBody) return null;
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const msg = messages[i];
+      if (msg.author === 'user' && msg.body === failedPromptBody) {
+        return msg._id;
+      }
+    }
+    return null;
+  })();
+
   return (
     <div
       ref={scrollRef}
@@ -39,7 +56,13 @@ export function ChatMessageList({
         )}
 
         {messages.map((message) => (
-          <MessageBubble key={message._id} message={message} />
+          <MessageBubble
+            key={message._id}
+            message={message}
+            showRetry={message._id === failedMessageId}
+            isRetrying={isSending && message._id === failedMessageId}
+            onRetry={onRetryFailedPrompt}
+          />
         ))}
 
         {streamingMessage && (
