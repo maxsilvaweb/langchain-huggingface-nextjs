@@ -3,13 +3,23 @@
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, FileText, Loader2, MessageSquare, Plus, Upload } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Loader2,
+  MessageSquare,
+  Plus,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { AppPagination } from '@/components/app-pagination';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
 import { PageProgressLoader } from '@/components/page-progress-loader';
+import { AppDialog, AppDialogFooter } from '@/components/ui/app-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +60,8 @@ export default function DocumentsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [inputMode, setInputMode] = useState<'paste' | 'upload'>('paste');
   const [page, setPage] = useState(1);
+  const [deletingSource, setDeletingSource] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const ACCEPTED_UPLOAD_TYPES =
     '.txt,.md,.markdown,.csv,.json,.html,.htm,.pdf';
@@ -284,6 +296,52 @@ export default function DocumentsPage() {
     }
   };
 
+  const refreshDocuments = async () => {
+    const listResponse = await fetch('/api/documents');
+    const listData = await listResponse.json();
+    if (listResponse.ok) {
+      setDocuments(listData.documents || []);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingSource) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/documents/by-source', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: deletingSource }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.detail || 'Failed to delete document');
+      }
+
+      toast.success(
+        `Deleted “${deletingSource}” (${data.deleted ?? 0} chunk${
+          (data.deleted ?? 0) === 1 ? '' : 's'
+        })`,
+      );
+
+      setExpandedSources((prev) => {
+        const next = new Set(prev);
+        next.delete(deletingSource);
+        return next;
+      });
+      setDeletingSource(null);
+      await refreshDocuments();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to delete document';
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (!isLoaded || !isSignedIn) {
     return null;
   }
@@ -294,6 +352,7 @@ export default function DocumentsPage() {
       <PageHeader
         title="Knowledge Base"
         description={`${documents.length} document${documents.length !== 1 ? 's' : ''} indexed`}
+        contentClassName="max-w-6xl"
         actions={
           <Button
             onClick={() => {
@@ -316,58 +375,8 @@ export default function DocumentsPage() {
         }
       />
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
-        {/* How RAG Works - Moved to top */}
-        <div className="mb-6 rounded-lg border border-white/10 bg-emerald-900/20 p-4">
-          <h3 className="font-medium text-emerald-300 mb-2">How RAG Works</h3>
-          <ul className="text-sm text-white/60 space-y-1">
-            <li>• Documents are split into chunks and converted to embeddings</li>
-            <li>• When you ask a question, relevant chunks are retrieved</li>
-            <li>• The AI uses this context to provide accurate, sourced answers</li>
-            <li>• Sources are cited in the response (e.g., "[Source 1]")</li>
-          </ul>
-
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <h4 className="text-sm font-medium text-emerald-300 mb-2">
-              Try these queries in chat
-            </h4>
-            {isLoadingQueries ? (
-              <div className="flex items-center gap-2 text-sm text-white/40">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Generating questions from your documents...
-              </div>
-            ) : suggestedQueries.length > 0 ? (
-              <div className="space-y-1.5">
-                {suggestedQueries.map((query) => (
-                  <button
-                    key={query}
-                    type="button"
-                    onClick={() => {
-                      sessionStorage.setItem('chat-pending-prompt', query);
-                      router.push('/chat');
-                    }}
-                    className="flex w-full items-center gap-2 rounded-md bg-white/5 px-3 py-1.5 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer group"
-                  >
-                    <span className="text-emerald-400 shrink-0">→</span>
-                    <span className="flex-1 truncate">{query}</span>
-                    <MessageSquare className="h-3.5 w-3.5 text-white/30 shrink-0 transition-colors group-hover:text-emerald-400" />
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-white/40">
-                Add documents to see suggested queries.
-              </p>
-            )}
-            {suggestedQueries.length > 0 && (
-              <p className="mt-2 text-xs text-white/40">
-                Generated from your current knowledge base.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Upload Form */}
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        {/* Upload Form — full width above columns */}
         {showForm && (
           <form
             onSubmit={handleSubmit}
@@ -504,11 +513,66 @@ export default function DocumentsPage() {
           </form>
         )}
 
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)] md:items-start lg:gap-8">
+          {/* How RAG Works — left on md+, stacked above on mobile */}
+          <aside className="md:sticky md:top-24">
+            <div className="rounded-lg border border-white/10 bg-emerald-900/20 p-4">
+              <h3 className="font-medium text-emerald-300 mb-2">How RAG Works</h3>
+              <ul className="text-sm text-white/60 space-y-1">
+                <li>• Documents are split into chunks and converted to embeddings</li>
+                <li>• When you ask a question, relevant chunks are retrieved</li>
+                <li>• The AI uses this context to provide accurate, sourced answers</li>
+                <li>• Sources are cited in the response (e.g., "[Source 1]")</li>
+              </ul>
+
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <h4 className="text-sm font-medium text-emerald-300 mb-2">
+                  Try these queries in chat
+                </h4>
+                {isLoadingQueries ? (
+                  <div className="flex items-center gap-2 text-sm text-white/40">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Generating questions from your documents...
+                  </div>
+                ) : suggestedQueries.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {suggestedQueries.map((query) => (
+                      <button
+                        key={query}
+                        type="button"
+                        onClick={() => {
+                          sessionStorage.setItem('chat-pending-prompt', query);
+                          router.push('/chat');
+                        }}
+                        className="flex w-full items-center gap-2 rounded-md bg-white/5 px-3 py-1.5 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer group"
+                      >
+                        <span className="text-emerald-400 shrink-0">→</span>
+                        <span className="flex-1 truncate">{query}</span>
+                        <MessageSquare className="h-3.5 w-3.5 text-white/30 shrink-0 transition-colors group-hover:text-emerald-400" />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-white/40">
+                    Add documents to see suggested queries.
+                  </p>
+                )}
+                {suggestedQueries.length > 0 && (
+                  <p className="mt-2 text-xs text-white/40">
+                    Generated from your current knowledge base.
+                  </p>
+                )}
+              </div>
+            </div>
+          </aside>
+
+          {/* Document list — right on md+ */}
+          <section className="min-w-0">
         {/* Document List */}
         {isLoading ? (
           <PageProgressLoader label="Loading documents" />
         ) : documents.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-12 rounded-lg border border-white/10 bg-white/5">
             <FileText className="h-12 w-12 mx-auto text-white/20 mb-4" />
             <h2 className="text-lg font-medium text-white/60 mb-2">
               No documents yet
@@ -530,54 +594,79 @@ export default function DocumentsPage() {
               {pagedDocuments.map((group) => {
               const isExpanded = expandedSources.has(group.source);
               const previewText = group.chunks[0]?.text || '';
-              
+              const isRowDeleting = deletingSource === group.source && isDeleting;
+
               return (
                 <div
                   key={group.source}
                   className={cn(
                     'rounded-lg border border-white/10 bg-white/5',
-                    'hover:bg-white/[0.07] transition-colors'
+                    'hover:bg-white/[0.07] transition-colors',
+                    isRowDeleting && 'opacity-60',
                   )}
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggleExpanded(group.source)}
-                    className="w-full p-4 text-left cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4 text-emerald-400 shrink-0" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <div className="flex items-start gap-1 p-4">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpanded(group.source)}
+                      className="min-w-0 flex-1 text-left cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-emerald-400 shrink-0" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-emerald-400 shrink-0" />
+                            )}
+                            <FileText className="h-4 w-4 text-emerald-400 shrink-0" />
+                            <span className="font-medium text-white truncate">
+                              {group.source}
+                            </span>
+                            <span className="text-xs text-white/40 bg-white/10 px-2 py-0.5 rounded">
+                              {group.totalChunks} chunk
+                              {group.totalChunks !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          {!isExpanded && (
+                            <p className="text-sm text-white/60 line-clamp-2 ml-6">
+                              {previewText}
+                            </p>
                           )}
-                          <FileText className="h-4 w-4 text-emerald-400 shrink-0" />
-                          <span className="font-medium text-white truncate">
-                            {group.source}
-                          </span>
-                          <span className="text-xs text-white/40 bg-white/10 px-2 py-0.5 rounded">
-                            {group.totalChunks} chunk{group.totalChunks !== 1 ? 's' : ''}
-                          </span>
                         </div>
-                        {!isExpanded && (
-                          <p className="text-sm text-white/60 line-clamp-2 ml-6">
-                            {previewText}
-                          </p>
-                        )}
+                        <time className="text-xs text-white/30 shrink-0">
+                          {new Date(group.createdAt).toLocaleDateString()}
+                        </time>
                       </div>
-                      <time className="text-xs text-white/30 shrink-0">
-                        {new Date(group.createdAt).toLocaleDateString()}
-                      </time>
-                    </div>
-                  </button>
-                  
-                  {/* Expanded content - all chunks combined with scrollbar */}
+                    </button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={isDeleting}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingSource(group.source);
+                      }}
+                      className="mt-0.5 shrink-0 cursor-pointer text-white/40 hover:bg-red-500/10 hover:text-red-400"
+                      aria-label={`Delete ${group.source}`}
+                      title={`Delete ${group.source}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
                   {isExpanded && (
                     <div className="px-4 pb-4">
                       <div className="ml-6 p-3 rounded-lg bg-black/20 border border-white/5 max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
                         {group.chunks.map((chunk, index) => (
-                          <div key={chunk._id} className={index > 0 ? 'mt-4 pt-4 border-t border-white/10' : ''}>
+                          <div
+                            key={chunk._id}
+                            className={
+                              index > 0 ? 'mt-4 pt-4 border-t border-white/10' : ''
+                            }
+                          >
                             {group.totalChunks > 1 && (
                               <p className="text-xs text-emerald-400/70 mb-2">
                                 Chunk {index + 1} of {group.totalChunks}
@@ -607,7 +696,37 @@ export default function DocumentsPage() {
             />
           </div>
         )}
+          </section>
+        </div>
       </main>
+
+      <AppDialog
+        open={!!deletingSource}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setDeletingSource(null);
+        }}
+        title="Delete document"
+        description={
+          deletingSource
+            ? `Remove “${deletingSource}” and all of its chunks from the knowledge base? This cannot be undone.`
+            : 'Remove this document from the knowledge base?'
+        }
+        footer={
+          <AppDialogFooter
+            cancelText="Cancel"
+            confirmText="Delete"
+            confirmTheme="danger"
+            confirmIcon={Trash2}
+            confirmLoading={isDeleting}
+            onCancel={() => {
+              if (!isDeleting) setDeletingSource(null);
+            }}
+            onConfirm={() => {
+              void handleConfirmDelete();
+            }}
+          />
+        }
+      />
     </div>
   );
 }

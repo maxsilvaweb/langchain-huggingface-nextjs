@@ -87,3 +87,9 @@ variable "rag_embedding_provider" {
   type        = string
   default     = "huggingface"
 }
+
+variable "internal_api_key" {
+  description = "Shared secret between Next.js and the Python API (openssl rand -hex 32)"
+  type        = string
+  sensitive   = true
+}

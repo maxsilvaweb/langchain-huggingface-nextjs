@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
-
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://127.0.0.1:8000';
+import { checkUserRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { pythonApiFetch } from '@/lib/python-api';
 
 export async function GET() {
   try {
@@ -13,6 +13,11 @@ export async function GET() {
       });
     }
 
+    const rate = checkUserRateLimit(userId, 'search');
+    if (!rate.ok) {
+      return rateLimitResponse(rate);
+    }
+
     const token = await getToken({ template: 'convex' });
     if (!token) {
       return new Response(JSON.stringify({ error: 'Missing Convex token' }), {
@@ -21,12 +26,9 @@ export async function GET() {
       });
     }
 
-    // Proxy to Python backend
-    const response = await fetch(`${PYTHON_API_URL}/documents`, {
+    const response = await pythonApiFetch('/documents', {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      convexToken: token,
     });
 
     const data = await response.json();

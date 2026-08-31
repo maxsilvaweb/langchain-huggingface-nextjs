@@ -96,6 +96,11 @@ resource "google_cloud_run_v2_service" "web" {
         name  = "PYTHON_API_URL"
         value = google_cloud_run_v2_service.api.uri
       }
+
+      env {
+        name  = "INTERNAL_API_KEY"
+        value = var.internal_api_key
+      }
     }
 
     scaling {
@@ -188,6 +193,16 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "LANGSMITH_API_KEY"
         value = var.langsmith_api_key
       }
+
+      env {
+        name  = "INTERNAL_API_KEY"
+        value = var.internal_api_key
+      }
+
+      env {
+        name  = "REQUIRE_INTERNAL_API_KEY"
+        value = "true"
+      }
     }
 
     scaling {
@@ -197,7 +212,7 @@ resource "google_cloud_run_v2_service" "api" {
   }
 }
 
-# Allow unauthenticated access to the web service
+# Allow unauthenticated access to the web service only
 resource "google_cloud_run_v2_service_iam_member" "web_public" {
   project  = var.project_id
   location = var.region
@@ -206,12 +221,12 @@ resource "google_cloud_run_v2_service_iam_member" "web_public" {
   member   = "allUsers"
 }
 
-# Allow unauthenticated access to the API service
-# (Next.js API routes proxy to this; service-to-service auth requires Cloud Run IAM token which adds complexity for a demo)
-resource "google_cloud_run_v2_service_iam_member" "api_public" {
+# Python API is private: only the Cloud Run runtime SA (used by web) may invoke it.
+# Next.js attaches a Google ID token from the metadata server when calling PYTHON_API_URL.
+resource "google_cloud_run_v2_service_iam_member" "api_invoker" {
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.api.name
   role     = "roles/run.invoker"
-  member   = "allUsers"
+  member   = "serviceAccount:${google_service_account.rag_chat.email}"
 }

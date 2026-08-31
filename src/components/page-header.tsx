@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigationLoading } from '@/components/providers/NavigationLoadingProvider';
 import { getActiveChatHref } from '@/lib/chat-navigation';
+import { cn } from '@/lib/utils';
 
 type PageHeaderProps = {
   title: string;
@@ -13,6 +14,8 @@ type PageHeaderProps = {
   actions?: ReactNode;
   /** Override back target. Defaults to the active conversation thread. */
   backHref?: string;
+  /** Content width class — defaults to max-w-4xl. */
+  contentClassName?: string;
 };
 
 export function PageHeader({
@@ -20,13 +23,19 @@ export function PageHeader({
   description,
   actions,
   backHref,
+  contentClassName = 'max-w-4xl',
 }: PageHeaderProps) {
   const router = useRouter();
   const { startNavigation } = useNavigationLoading();
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-background/95 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+      <div
+        className={cn(
+          'mx-auto flex items-center justify-between px-4 py-4',
+          contentClassName,
+        )}
+      >
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"

@@ -143,6 +143,41 @@ export const remove = mutationGeneric({
 });
 
 /**
+ * Delete all chunks for a given source name (one uploaded document).
+ * Any authenticated user can delete from the shared knowledge base.
+ */
+export const removeBySource = mutationGeneric({
+  args: { source: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = await getAuthenticatedUser(ctx);
+    if (!userId) {
+      throw new Error('Unauthorized');
+    }
+
+    const source = args.source.trim();
+    if (!source) {
+      throw new Error('Source is required');
+    }
+
+    const docs = await ctx.db.query('documents').collect();
+    let deleted = 0;
+
+    for (const doc of docs) {
+      const docSource =
+        typeof doc.metadata?.source === 'string'
+          ? doc.metadata.source
+          : 'Unknown source';
+      if (docSource === source) {
+        await ctx.db.delete(doc._id);
+        deleted += 1;
+      }
+    }
+
+    return { deleted };
+  },
+});
+
+/**
  * Get total document count in the shared knowledge base.
  */
 export const count = queryGeneric({

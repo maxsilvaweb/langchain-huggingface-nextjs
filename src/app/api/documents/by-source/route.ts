@@ -2,9 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { checkUserRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { pythonApiFetch } from '@/lib/python-api';
 
-const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-
-export async function POST(req: Request) {
+export async function DELETE(req: Request) {
   try {
     const { userId, getToken } = await auth();
 
@@ -28,48 +26,34 @@ export async function POST(req: Request) {
       });
     }
 
-    const formData = await req.formData();
-    const file = formData.get('file');
-    const source = formData.get('source');
+    const body = await req.json().catch(() => ({}));
+    const source =
+      typeof body?.source === 'string' ? body.source.trim() : '';
 
-    if (!(file instanceof File)) {
-      return new Response(JSON.stringify({ error: 'File is required' }), {
+    if (!source) {
+      return new Response(JSON.stringify({ error: 'Source is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    if (file.size > MAX_UPLOAD_BYTES) {
-      return new Response(
-        JSON.stringify({ error: 'File too large (max 5 MB)' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
-    }
-
-    const upstream = new FormData();
-    upstream.append('file', file, file.name);
-    if (typeof source === 'string' && source.trim()) {
-      upstream.append('source', source.trim());
-    }
-
-    const response = await pythonApiFetch('/documents/ingest-file', {
-      method: 'POST',
-      convexToken: token,
-      body: upstream,
-    });
+    const response = await pythonApiFetch(
+      `/documents/by-source?source=${encodeURIComponent(source)}`,
+      {
+        method: 'DELETE',
+        convexToken: token,
+      },
+    );
 
     const data = await response.json().catch(() => ({
-      error: 'Invalid response from ingestion service',
+      error: 'Invalid response from deletion service',
     }));
 
     if (!response.ok) {
       const message =
         typeof data?.detail === 'string'
           ? data.detail
-          : data?.error || 'Failed to ingest file';
+          : data?.error || 'Failed to delete document';
       return new Response(JSON.stringify({ error: message, ...data }), {
         status: response.status,
         headers: { 'Content-Type': 'application/json' },
@@ -81,7 +65,7 @@ export async function POST(req: Request) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Document file ingest error:', error);
+    console.error('Document delete-by-source error:', error);
     const message =
       error instanceof Error ? error.message : 'Internal Server Error';
     return new Response(JSON.stringify({ error: message }), {

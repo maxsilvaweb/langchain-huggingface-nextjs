@@ -25,16 +25,19 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - PYTHON_API_URL=http://api:8000
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
     depends_on:
       - api
 
-  # Python FastAPI backend
+  # Python FastAPI backend (only reachable via Docker network / localhost)
   api:
     build:
       context: ./python-service
       dockerfile: Dockerfile
+    # Bind to localhost only for optional local debugging (still requires INTERNAL_API_KEY).
+    # Other containers reach it at http://api:8000 on the compose network.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - PORT=8000
       - NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
@@ -47,3 +50,5 @@ services:
       - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-langchain-rag-chat-dev}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
+      - REQUIRE_INTERNAL_API_KEY=true

@@ -1,7 +1,8 @@
 import { auth } from '@clerk/nextjs/server';
 import { fetchQuery } from 'convex/nextjs';
 import { api } from '@/lib/convex/api';
-import { PYTHON_CHAT_API_URL } from '@/lib/globals';
+import { checkUserRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { pythonApiFetch } from '@/lib/python-api';
 
 export async function POST(req: Request) {
   try {
@@ -13,6 +14,11 @@ export async function POST(req: Request) {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    const rate = checkUserRateLimit(userId, 'chat');
+    if (!rate.ok) {
+      return rateLimitResponse(rate);
     }
 
     const token = await getToken({ template: 'convex' });
@@ -39,13 +45,10 @@ export async function POST(req: Request) {
     const user = await fetchQuery(api.users.me, {}, { token });
     const preferences = user?.preferences ?? {};
 
-    // Proxy request to Python backend
-    const response = await fetch(PYTHON_CHAT_API_URL, {
+    const response = await pythonApiFetch('/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+      convexToken: token,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message,
         conversationId,
@@ -59,6 +62,7 @@ export async function POST(req: Request) {
 
     return new Response(response.body, {
       headers: response.headers,
+      status: response.status,
     });
   } catch (error) {
     console.error('Chat error:', error);

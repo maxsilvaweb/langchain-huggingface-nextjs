@@ -21,5 +21,9 @@ google_api_key       = "..."
 # LangSmith
 langsmith_api_key = "lsv2_pt_..."
 
+# Shared secret between Next.js and Python API (required)
+# Generate with: openssl rand -hex 32
+internal_api_key = "replace-me"
+
 # RAG
 rag_embedding_provider = "openai"

@@ -191,7 +191,7 @@ def should_add_disclaimer(confidence_metrics: dict) -> Optional[str]:
 # RATE LIMITING CONFIGURATION
 # ============================================================================
 
-# Rate limit configuration for slowapi
+# Rate limit configuration for slowapi (wired in rate_limit.py + main.py)
 RATE_LIMIT_CHAT = "20/minute"  # Chat endpoint
-RATE_LIMIT_INGEST = "10/minute"  # Document ingestion
-RATE_LIMIT_SEARCH = "30/minute"  # Vector search
+RATE_LIMIT_INGEST = "10/minute"  # Document ingestion / deletion
+RATE_LIMIT_SEARCH = "30/minute"  # Vector search / list / suggest

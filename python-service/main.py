@@ -14,12 +14,21 @@ import db as convex
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from constants import MAX_INPUT_LENGTH, MAX_INGEST_TEXT_LENGTH, SERVICE_VERSION
 from container import get_container
 from document_extract import extract_text_from_bytes
 from guardrails import validate_input_or_raise_http
+from internal_auth import get_convex_token, internal_api_key_middleware
 from logging_config import get_logger, set_trace_id
+from rate_limit import (
+    RATE_LIMIT_CHAT,
+    RATE_LIMIT_INGEST,
+    RATE_LIMIT_SEARCH,
+    limiter,
+)
 
 # Initialize structured logger
 log = get_logger("main")
@@ -30,6 +39,9 @@ app = FastAPI(
     description="AI chat API with RAG (Retrieval-Augmented Generation) support",
     version=SERVICE_VERSION,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.middleware("http")(internal_api_key_middleware)
 
 
 # ============================================================================
@@ -101,20 +113,26 @@ class IngestUrlRequest(BaseModel):
     metadata: Optional[dict[str, Any]] = None
 
 
-def get_bearer_token(authorization: str | None) -> str:
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token:
-        raise HTTPException(status_code=401, detail="Invalid Authorization header")
-
-    return token
+def get_bearer_token(
+    authorization: str | None,
+    x_convex_token: str | None = None,
+) -> str:
+    """Resolve Convex JWT from X-Convex-Token (preferred) or Authorization."""
+    return get_convex_token(
+        authorization=authorization,
+        x_convex_token=x_convex_token,
+    )
 
 
 # Define a POST route at "/chat" to receive chat messages
 @app.post("/chat")
-async def chat(request: ChatRequest, authorization: str | None = Header(default=None)):
+@limiter.limit(RATE_LIMIT_CHAT)
+async def chat(
+    request: Request,
+    body: ChatRequest,
+    authorization: str | None = Header(default=None),
+    x_convex_token: str | None = Header(default=None, alias="X-Convex-Token"),
+):
     """
     Handle chat messages with optional RAG context retrieval.
     
@@ -122,19 +140,19 @@ async def chat(request: ChatRequest, authorization: str | None = Header(default=
     and the response is streamed back to the client.
     """
     try:
-        convex_token = get_bearer_token(authorization)
+        convex_token = get_bearer_token(authorization, x_convex_token)
         
         # Validate input (guardrails)
-        validated_message = validate_input_or_raise_http(request.message)
+        validated_message = validate_input_or_raise_http(body.message)
         
         log.info(
             "chat_request",
-            conversation_id=request.conversationId,
-            model=request.modelName,
-            provider=request.provider,
-            use_rag=request.useRag,
-            temperature=request.temperature,
-            has_custom_instructions=bool(request.customInstructions),
+            conversation_id=body.conversationId,
+            model=body.modelName,
+            provider=body.provider,
+            use_rag=body.useRag,
+            temperature=body.temperature,
+            has_custom_instructions=bool(body.customInstructions),
             message_length=len(validated_message),
         )
         
@@ -142,13 +160,13 @@ async def chat(request: ChatRequest, authorization: str | None = Header(default=
         # NOTE: Message persistence is handled by the React client
         async_gen = chat_service.get_chat_stream(
             validated_message,
-            request.conversationId,
+            body.conversationId,
             convex_token,
-            request.modelName,
-            request.provider,
-            use_rag=request.useRag,
-            temperature=request.temperature,
-            custom_instructions=request.customInstructions,
+            body.modelName,
+            body.provider,
+            use_rag=body.useRag,
+            temperature=body.temperature,
+            custom_instructions=body.customInstructions,
         )
 
         async def stream_generator():
@@ -170,9 +188,12 @@ async def chat(request: ChatRequest, authorization: str | None = Header(default=
 # ============================================================================
 
 @app.post("/documents/ingest")
+@limiter.limit(RATE_LIMIT_INGEST)
 async def ingest_text(
-    request: IngestTextRequest,
+    request: Request,
+    body: IngestTextRequest,
     authorization: str | None = Header(default=None),
+    x_convex_token: str | None = Header(default=None, alias="X-Convex-Token"),
 ):
     """
     Ingest a text document into the vector store for RAG retrieval.
@@ -181,21 +202,21 @@ async def ingest_text(
     Uses dependency injection via ServiceContainer for SOLID compliance.
     """
     try:
-        convex_token = get_bearer_token(authorization)
+        convex_token = get_bearer_token(authorization, x_convex_token)
         
         # Get document ingester from DI container
         container = get_container()
         ingester = container.get_document_ingester(convex_token)
         
         doc_ids = await ingester.ingest(
-            text=request.text,
-            source=request.source,
-            metadata=request.metadata,
+            text=body.text,
+            source=body.source,
+            metadata=body.metadata,
         )
         
         log.info(
             "document_ingested",
-            source=request.source,
+            source=body.source,
             chunk_count=len(doc_ids),
         )
         
@@ -213,16 +234,19 @@ async def ingest_text(
 
 
 @app.post("/documents/ingest-file")
+@limiter.limit(RATE_LIMIT_INGEST)
 async def ingest_file(
+    request: Request,
     file: UploadFile = File(...),
     source: str | None = Form(default=None),
     authorization: str | None = Header(default=None),
+    x_convex_token: str | None = Header(default=None, alias="X-Convex-Token"),
 ):
     """
     Upload a document file (.txt, .md, .pdf, …), extract text, and ingest it.
     """
     try:
-        convex_token = get_bearer_token(authorization)
+        convex_token = get_bearer_token(authorization, x_convex_token)
         filename = file.filename or "upload.txt"
         data = await file.read()
         text = extract_text_from_bytes(filename, data)
@@ -267,9 +291,12 @@ async def ingest_file(
 
 
 @app.post("/documents/ingest-url")
+@limiter.limit(RATE_LIMIT_INGEST)
 async def ingest_url(
-    request: IngestUrlRequest,
+    request: Request,
+    body: IngestUrlRequest,
     authorization: str | None = Header(default=None),
+    x_convex_token: str | None = Header(default=None, alias="X-Convex-Token"),
 ):
     """
     Fetch content from a URL and ingest it into the vector store.
@@ -280,11 +307,11 @@ async def ingest_url(
         import httpx
         from bs4 import BeautifulSoup
         
-        convex_token = get_bearer_token(authorization)
+        convex_token = get_bearer_token(authorization, x_convex_token)
         
         # Fetch URL content
         async with httpx.AsyncClient() as client:
-            response = await client.get(request.url, follow_redirects=True)
+            response = await client.get(body.url, follow_redirects=True)
             response.raise_for_status()
         
         # Extract text from HTML
@@ -297,40 +324,45 @@ async def ingest_url(
         container = get_container()
         ingester = container.get_document_ingester(convex_token)
         
-        metadata = request.metadata or {}
-        metadata["source_url"] = request.url
+        metadata = body.metadata or {}
+        metadata["source_url"] = body.url
         
         doc_ids = await ingester.ingest(
             text=text,
-            source=request.url,
+            source=body.url,
             metadata=metadata,
         )
         
         log.info(
             "url_ingested",
-            url=request.url,
+            url=body.url,
             chunk_count=len(doc_ids),
         )
         
         return {
             "success": True,
-            "message": f"Ingested {len(doc_ids)} chunks from {request.url}",
+            "message": f"Ingested {len(doc_ids)} chunks from {body.url}",
             "chunk_count": len(doc_ids),
             "document_ids": doc_ids,
-            "source_url": request.url,
+            "source_url": body.url,
         }
     except HTTPException:
         raise
     except Exception as e:
-        log.error("url_ingest_error", url=request.url, error=str(e), exc_info=True)
+        log.error("url_ingest_error", url=body.url, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/documents")
-async def list_documents(authorization: str | None = Header(default=None)):
+@limiter.limit(RATE_LIMIT_SEARCH)
+async def list_documents(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    x_convex_token: str | None = Header(default=None, alias="X-Convex-Token"),
+):
     """List all documents for the current user."""
     try:
-        convex_token = get_bearer_token(authorization)
+        convex_token = get_bearer_token(authorization, x_convex_token)
         docs = convex.list_documents(convex_token)
         count = convex.get_document_count(convex_token)
         
@@ -346,7 +378,12 @@ async def list_documents(authorization: str | None = Header(default=None)):
 
 
 @app.get("/documents/suggest-queries")
-async def suggest_queries(authorization: str | None = Header(default=None)):
+@limiter.limit(RATE_LIMIT_SEARCH)
+async def suggest_queries(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    x_convex_token: str | None = Header(default=None, alias="X-Convex-Token"),
+):
     """
     Generate suggested queries from the knowledge base using the LLM.
     
@@ -354,7 +391,7 @@ async def suggest_queries(authorization: str | None = Header(default=None)):
     might ask that the documents could answer.
     """
     try:
-        convex_token = get_bearer_token(authorization)
+        convex_token = get_bearer_token(authorization, x_convex_token)
         docs = convex.list_documents(convex_token)
 
         if not docs:
@@ -412,14 +449,50 @@ async def suggest_queries(authorization: str | None = Header(default=None)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.delete("/documents/by-source")
+@limiter.limit(RATE_LIMIT_INGEST)
+async def delete_documents_by_source(
+    request: Request,
+    source: str,
+    authorization: str | None = Header(default=None),
+    x_convex_token: str | None = Header(default=None, alias="X-Convex-Token"),
+):
+    """
+    Delete all chunks for a document source name from the knowledge base.
+    """
+    try:
+        convex_token = get_bearer_token(authorization, x_convex_token)
+        trimmed = (source or "").strip()
+        if not trimmed:
+            raise HTTPException(status_code=400, detail="Source is required")
+
+        deleted = convex.delete_documents_by_source(trimmed, convex_token)
+        log.info("documents_deleted_by_source", source=trimmed, deleted=deleted)
+
+        return {
+            "success": True,
+            "message": f"Deleted {deleted} chunk(s)",
+            "deleted": deleted,
+            "source": trimmed,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("delete_by_source_error", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.delete("/documents/{doc_id}")
+@limiter.limit(RATE_LIMIT_INGEST)
 async def delete_document(
+    request: Request,
     doc_id: str,
     authorization: str | None = Header(default=None),
+    x_convex_token: str | None = Header(default=None, alias="X-Convex-Token"),
 ):
     """Delete a document by ID."""
     try:
-        convex_token = get_bearer_token(authorization)
+        convex_token = get_bearer_token(authorization, x_convex_token)
         convex.delete_document(doc_id, convex_token)
         
         return {"success": True, "message": "Document deleted"}
@@ -441,7 +514,10 @@ async def health():
 
 
 @app.get("/health/ready")
-async def health_ready(authorization: str | None = Header(default=None)):
+async def health_ready(
+    authorization: str | None = Header(default=None),
+    x_convex_token: str | None = Header(default=None, alias="X-Convex-Token"),
+):
     """
     Readiness check - verifies service components.
     
@@ -457,9 +533,9 @@ async def health_ready(authorization: str | None = Header(default=None)):
         container = get_container()
         
         # Check Convex connectivity (if token provided)
-        if authorization:
+        if authorization or x_convex_token:
             try:
-                convex_token = get_bearer_token(authorization)
+                convex_token = get_bearer_token(authorization, x_convex_token)
                 convex.get_document_count(convex_token)
                 checks["convex"] = True
             except Exception as e:

@@ -6,6 +6,12 @@ from main import app
 # Create a test client for our FastAPI app
 client = TestClient(app)
 
+AUTH_HEADERS = {
+    "Authorization": "Bearer token-123",
+    "X-Convex-Token": "token-123",
+    "X-Internal-Api-Key": "test-internal-api-key",
+}
+
 # We use the pytest-asyncio decorator to handle asynchronous tests
 @pytest.mark.asyncio
 async def test_chat_endpoint():
@@ -24,7 +30,7 @@ async def test_chat_endpoint():
         # Perform the POST request to the "/chat" endpoint
         response = client.post(
             "/chat",
-            headers={"Authorization": "Bearer token-123"},
+            headers=AUTH_HEADERS,
             json={
                 "message": "hi",
                 "conversationId": "test-id"

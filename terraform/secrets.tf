@@ -114,6 +114,19 @@ resource "google_secret_manager_secret_version" "langsmith_api_key" {
   secret_data = var.langsmith_api_key
 }
 
+resource "google_secret_manager_secret" "internal_api_key" {
+  secret_id = "internal-api-key"
+
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "internal_api_key" {
+  secret      = google_secret_manager_secret.internal_api_key.id
+  secret_data = var.internal_api_key
+}
+
 # IAM: Allow Cloud Run to access secrets
 resource "google_secret_manager_secret_iam_member" "cloudrun_access" {
   for_each = {
@@ -125,6 +138,7 @@ resource "google_secret_manager_secret_iam_member" "cloudrun_access" {
     anthropic    = google_secret_manager_secret.anthropic_api_key.name
     google_key   = google_secret_manager_secret.google_api_key.name
     langsmith    = google_secret_manager_secret.langsmith_api_key.name
+    internal_key = google_secret_manager_secret.internal_api_key.name
   }
 
   secret_id = each.value

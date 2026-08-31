@@ -3,6 +3,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { DEFAULT_CONVERSATION_TITLE } from '@/lib/locale';
+import { checkUserRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +13,11 @@ export async function POST(req: Request) {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    const rate = checkUserRateLimit(userId, 'title');
+    if (!rate.ok) {
+      return rateLimitResponse(rate);
     }
 
     const { message } = await req.json();

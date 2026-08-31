@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
-
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://127.0.0.1:8000';
+import { checkUserRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { pythonApiFetch } from '@/lib/python-api';
 
 export async function POST(req: Request) {
   try {
@@ -14,6 +14,11 @@ export async function POST(req: Request) {
       });
     }
 
+    const rate = checkUserRateLimit(userId, 'ingest');
+    if (!rate.ok) {
+      return rateLimitResponse(rate);
+    }
+
     const token = await getToken({ template: 'convex' });
     if (!token) {
       return new Response(JSON.stringify({ error: 'Missing Convex token' }), {
@@ -22,7 +27,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Validate input
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       return new Response(JSON.stringify({ error: 'Text is required' }), {
         status: 400,
@@ -37,13 +41,10 @@ export async function POST(req: Request) {
       });
     }
 
-    // Proxy to Python backend
-    const response = await fetch(`${PYTHON_API_URL}/documents/ingest`, {
+    const response = await pythonApiFetch('/documents/ingest', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+      convexToken: token,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, source, metadata }),
     });
 

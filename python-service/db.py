@@ -109,3 +109,12 @@ def delete_document(doc_id: str, token: str) -> None:
     """Delete a document by ID."""
     client = get_client(token)
     client.mutation("documents:remove", {"id": doc_id})
+
+
+def delete_documents_by_source(source: str, token: str) -> int:
+    """Delete all chunks for a source name. Returns number of deleted chunks."""
+    client = get_client(token)
+    result = client.mutation("documents:removeBySource", {"source": source})
+    if isinstance(result, dict):
+        return int(result.get("deleted", 0))
+    return int(result or 0)

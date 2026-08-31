@@ -68,6 +68,7 @@ jobs:
             --image ${{ env.REGISTRY }}/web:latest \
             --region ${{ env.REGION }} \
             --project ${{ env.PROJECT_ID }} \
+            --update-env-vars "INTERNAL_API_KEY=${{ secrets.INTERNAL_API_KEY }}" \
             --quiet
 
       - name: Deploy api to Cloud Run
@@ -77,9 +78,27 @@ jobs:
             --region ${{ env.REGION }} \
             --project ${{ env.PROJECT_ID }} \
             --port 8080 \
+            --update-env-vars "INTERNAL_API_KEY=${{ secrets.INTERNAL_API_KEY }},REQUIRE_INTERNAL_API_KEY=true" \
+            --quiet
+
+      - name: Lock down API (private invoker only)
+        run: |
+          # Remove public access if present
+          gcloud run services remove-iam-policy-binding rag-chat-api \
+            --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID }} \
+            --member=allUsers \
+            --role=roles/run.invoker \
+            --quiet || true
+          # Allow the Cloud Run runtime SA (used by web) to invoke the API
+          gcloud run services add-iam-policy-binding rag-chat-api \
+            --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID }} \
+            --member=serviceAccount:rag-chat-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --role=roles/run.invoker \
             --quiet
 
       - name: Show deployment URLs
         run: |
           echo "Web: $(gcloud run services describe rag-chat-web --region ${{ env.REGION }} --project ${{ env.PROJECT_ID }} --format 'value(status.url)')"
-          echo "API: $(gcloud run services describe rag-chat-api --region ${{ env.REGION }} --project ${{ env.PROJECT_ID }} --format 'value(status.url)')"
+          echo "API (private): $(gcloud run services describe rag-chat-api --region ${{ env.REGION }} --project ${{ env.PROJECT_ID }} --format 'value(status.url)')"

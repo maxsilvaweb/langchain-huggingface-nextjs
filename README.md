@@ -63,15 +63,22 @@ This project uses a decoupled, polyglot backend architecture:
 
 ### Environment Configuration
 
-Two environment files are required:
+Copy the example env files and fill in values:
 
-1. **Root `.env.local` (Convex + frontend):**
-   - `CONVEX_DEPLOYMENT`
-   - `NEXT_PUBLIC_CONVEX_URL`
+```bash
+cp .env.example .env                 # Next.js + shared config
+cp python-service/.env.example python-service/.env
+```
 
-2. **`python-service/.env` (AI backend):**
-   - Copy `python-service/.env.example` → `python-service/.env`
-   - Hugging Face / OpenAI / Anthropic / Google keys (as needed by your provider)
+**Required in both `.env` and `python-service/.env`:**
+
+| Variable | Purpose |
+|----------|---------|
+| `INTERNAL_API_KEY` | Shared secret so only Next.js can call the Python API (`openssl rand -hex 32`) |
+| Provider keys | Hugging Face / OpenAI / Anthropic / Google as needed |
+| Convex + Clerk | `NEXT_PUBLIC_CONVEX_URL`, Clerk keys, JWT issuer |
+
+Root `.env` also needs Convex deployment + Clerk public/secret keys. Prefer calling the app via Next.js (`/api/*`); the Python port is not meant to be public.
 
 ### Running the Project
 
@@ -101,14 +108,14 @@ Then visit `http://localhost:3000`.
 
 ```bash
 # Copy env files
-cp .env.example .env.local        # Fill in your keys
+cp .env.example .env                  # Fill in keys including INTERNAL_API_KEY
 cp python-service/.env.example python-service/.env
 
 # Build and start both services
 docker compose up --build
 ```
 
-This runs the same containers that deploy to GCP. The web app is on `http://localhost:3000` and the API on `http://localhost:8000`. Note: you still need Convex running separately (`bunx convex dev`) since it's a managed service.
+This runs the same containers that deploy to GCP. The web app is on `http://localhost:3000`. The API listens on `127.0.0.1:8000` only (not LAN-exposed) and requires `INTERNAL_API_KEY`. You still need Convex running separately (`bunx convex dev`).
 
 ## Project Structure
 
@@ -180,11 +187,14 @@ python-service/
 
 ## Testing the API
 
-Verify the Python backend independently:
+The Python API requires a shared `INTERNAL_API_KEY` (and a Convex JWT). Prefer going through the Next.js `/api/*` routes. For direct local debugging:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/chat \
      -H "Content-Type: application/json" \
+     -H "X-Internal-Api-Key: $INTERNAL_API_KEY" \
+     -H "X-Convex-Token: <convex-token>" \
+     -H "Authorization: Bearer <convex-token>" \
      -d '{"message": "Hello!", "conversationId": "jd744024cd4bh502rk87zycgph8bzfz7"}'
 ```
 
@@ -213,6 +223,8 @@ This project includes a full RAG pipeline that allows the AI to answer questions
 ```bash
 curl -X POST http://127.0.0.1:8000/documents/ingest \
   -H "Content-Type: application/json" \
+  -H "X-Internal-Api-Key: $INTERNAL_API_KEY" \
+  -H "X-Convex-Token: <convex-token>" \
   -H "Authorization: Bearer <convex-token>" \
   -d '{
     "text": "Your document content here...",
@@ -225,6 +237,8 @@ curl -X POST http://127.0.0.1:8000/documents/ingest \
 ```bash
 curl -X POST http://127.0.0.1:8000/documents/ingest-url \
   -H "Content-Type: application/json" \
+  -H "X-Internal-Api-Key: $INTERNAL_API_KEY" \
+  -H "X-Convex-Token: <convex-token>" \
   -H "Authorization: Bearer <convex-token>" \
   -d '{"url": "https://example.com/article"}'
 ```
@@ -232,6 +246,8 @@ curl -X POST http://127.0.0.1:8000/documents/ingest-url \
 **List documents:**
 ```bash
 curl http://127.0.0.1:8000/documents \
+  -H "X-Internal-Api-Key: $INTERNAL_API_KEY" \
+  -H "X-Convex-Token: <convex-token>" \
   -H "Authorization: Bearer <convex-token>"
 ```
 
@@ -268,11 +284,28 @@ LANGCHAIN_PROJECT=langchain-rag-chat
 
 ## Production Hardening
 
+### Service-to-service auth
+
+- Python API requires `X-Internal-Api-Key` on all routes except `/health`
+- Convex JWT is sent as `X-Convex-Token` (and `Authorization` locally)
+- On GCP Cloud Run, the API is **not** public: only the web service account can invoke it; Next.js attaches a Google ID token from the metadata server
+
+### Rate limiting
+
+Per authenticated user (Clerk id on Next.js; bearer-token hash on Python):
+
+| Surface | Limit |
+|---------|-------|
+| Chat | 20 / minute |
+| Document ingest / delete | 10 / minute |
+| List / suggest | 30 / minute |
+| Title generation | 10 / minute |
+
 ### Input Guardrails
 
 - **Length limits** — Messages capped at 4,000 characters
 - **Injection detection** — Blocks common prompt injection patterns
-- **Rate limiting** — Configurable via `slowapi`
+- **Upload size** — Knowledge base files capped at 5 MB
 
 ### Output Guardrails
 
@@ -371,7 +404,7 @@ docker compose up --build
 ```
 
 - **Web** (Next.js): http://localhost:3000
-- **API** (Python FastAPI): http://localhost:8000
+- **API** (Python FastAPI): http://127.0.0.1:8000 (localhost only; requires `INTERNAL_API_KEY`)
 
 ### Dockerfiles
 
@@ -392,7 +425,7 @@ The infrastructure is defined as code using Terraform. Both services deploy to G
 ### Architecture
 
 ```
-User → Cloud Run (Next.js) → Cloud Run (Python API) → Convex (DB + Vector Search)
+User → Cloud Run (Next.js, public) → Cloud Run (Python API, private) → Convex
                                          ↓
                                    Secret Manager (API keys)
                                    LangSmith (Observability)
@@ -432,7 +465,7 @@ chmod +x deploy.sh
 | Cloud Run: `rag-chat-api` | Python API (0-3 instances, 2Gi, startup probe on /health) |
 | Secret Manager | Stores all API keys (Clerk, OpenAI, HuggingFace, etc.) |
 | Service Account | IAM identity for Cloud Run + CI/CD (run.admin, artifactregistry.writer) |
-| IAM policies | Both services publicly accessible (allUsers invoker) |
+| IAM policies | Web public (`allUsers`); API private (Cloud Run SA invoker only) + `INTERNAL_API_KEY` |
 
 ## CI/CD: GitHub Actions
 
@@ -448,12 +481,10 @@ gcloud iam service-accounts keys create key.json \
   --project rag-chat-app-2026
 ```
 
-2. **Add the key as a GitHub secret:**
-   - Go to your repo → Settings → Secrets and variables → Actions
-   - Click "New repository secret"
-   - Name: `GCP_SA_KEY`
-   - Value: paste the entire contents of `key.json`
-   - Delete `key.json` locally after adding (never commit it)
+2. **Add GitHub secrets:**
+   - `GCP_SA_KEY` — contents of `key.json` (delete the local file after)
+   - `INTERNAL_API_KEY` — same shared secret as local/terraform
+   - Build-time public vars as needed (`NEXT_PUBLIC_CONVEX_URL`, Clerk publishable key, etc.)
 
 3. **Push to main** — the workflow runs automatically:
 
